@@ -5,6 +5,7 @@ from math import pi
 from ir_support import CylindricalDHRobotPlot
 import os
 from spatialgeometry import Mesh
+from spatialmath.base import trotx, trotz, troty
 
 #links for the staubli
 link1 = DHLink(d=0.375, a=0, alpha=pi/2, qlim=[-pi, pi])
@@ -36,7 +37,6 @@ base_mesh = Mesh(filename=base_location)
 base_mesh = Mesh(filename=base_location, color="#7b1d1d") #red because its the same as my last one and it was ugly as gray.
 env.add(base_mesh)
 env.step()
-input("Enter to continue\n")
 
 #Joint 1
 mesh_folder = "Staubli Robot Files"
@@ -45,15 +45,10 @@ joint_1_mesh = Mesh(filename=joint_1_location, color="#7b1d1d")
 
 joint_check = robot.fkine_all(q) #checks all locations of the robot and lists. used to update position each time. maybe theres a better way?
 joint_1_mesh_place = joint_check[1].A
-joint_1_mesh.T = joint_1_mesh_place
+joint_1_mesh.T = joint_1_mesh_place @ trotx(pi) @ troty(-pi/2)
+print("Cylinder joint 1 position:", joint_check[1].A[:3, 3])
+print("Mesh placed at:", joint_1_mesh.T[:3, 3])
 
 env.add(joint_1_mesh)
-env.step()
-input("Enter to continue\n")
-
-q = np.array([pi/2, 0, 0, 0, 0, 0])
-robot.q = q
-joint_check = robot.fkine_all(q)
-joint_1_mesh.T = joint_check[1].A
 env.step()
 input("Enter to continue\n")
