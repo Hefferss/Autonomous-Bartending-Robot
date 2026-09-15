@@ -42,6 +42,18 @@ input("Enter to continue\n")
 mesh_folder = "Staubli Robot Files"
 joint_1_location = os.path.join(mesh_folder, "link_1.stl")
 joint_1_mesh = Mesh(filename=joint_1_location, color="#7b1d1d") 
+
+joint_check = robot.fkine_all(q) #checks all locations of the robot and lists. used to update position each time. maybe theres a better way?
+joint_1_mesh_place = joint_check[1].A
+joint_1_mesh.T = joint_1_mesh_place
+
 env.add(joint_1_mesh)
+env.step()
+input("Enter to continue\n")
+
+q = np.array([pi/2, 0, 0, 0, 0, 0])
+robot.q = q
+joint_check = robot.fkine_all(q)
+joint_1_mesh.T = joint_check[1].A
 env.step()
 input("Enter to continue\n")
