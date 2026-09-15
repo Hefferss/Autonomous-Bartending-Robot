@@ -54,7 +54,16 @@ link_check = robot.fkine_all(q)
 link_2_mesh_place = link_check[2].A
 link_2_mesh.T = link_2_mesh_place @ trotx(pi) @ trotz(pi/2) @ troty(pi) @ trotx(pi) @ transl(0, -0.23, 0)
 
+#link 3
+link_3_location = os.path.join(mesh_folder, "link_3.stl")
+link_3_mesh = Mesh(filename=link_3_location, color="#7b1d1d")
+link_3_mesh_place = link_check[3].A
+link_3_mesh.T = link_3_mesh_place  # start with no rotation, same trick that worked for link_2
+
+input("Enter to continue\n")
+
 env.add(link_1_mesh)
 env.add(link_2_mesh)
+env.add(link_3_mesh)
 env.step()
 input("Enter to continue\n")
