@@ -15,15 +15,21 @@ from spatialmath.base import transl, trotx, troty, trotz, tr2rpy, r2q
 from roboticstoolbox import jtraj
 from ir_support import tranimate_custom
 
-
 env = swift.Swift()
 env.launch(realtime=True)
-mesh_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Scene_parts")
-#loading hennessy lol
-hennessy_location = os.path.join(mesh_folder, "hennessy.stl")
-hennessy_mesh = Mesh(filename=hennessy_location, scale=[0.0254, 0.0254, 0.0254], color="#4e2a12")
-hennessy_mesh.T = transl(-0.3, 0.3, 0.9) @ trotx(pi/2)
-env.add(hennessy_mesh)
+item_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Scene_parts")
+
+#cognac scene load
+cognac_location = os.path.join(item_folder, "Cognac.stl")
+cognac_scene = Mesh(filename=cognac_location, color="#522B0F", scale=[0.001, 0.001, 0.001])
+cognac_scene.T = SE3(0.5, 0.5, 0.125) 
+env.add(cognac_scene)
+
+#cointreau.stl
+cointreau_location = os.path.join(item_folder, "Cointreau.stl")
+cointreau_scene = Mesh(filename=cointreau_location, color="#C47C07", scale=[0.02, 0.02, 0.02])
+cointreau_scene.T = SE3(0.5, 0.5, 0.01)
+env.add(cointreau_scene)
 
 env.step()
-input("Enter to finish\n")
+input("Press Enter to continue...")
