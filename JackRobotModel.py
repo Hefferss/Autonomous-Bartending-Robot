@@ -53,22 +53,21 @@ link_3_location = os.path.join(mesh_folder, "link_3.stl")
 link_3_mesh = Mesh(filename=link_3_location, color="#7b1d1d")
 link_3_mesh.T = link_check[3].A
 
+#link 4
+link_4_location = os.path.join(mesh_folder, "link_4.stl")
+link_4_mesh = Mesh(filename=link_4_location, color="#7b1d1d")
+link_4_mesh.T = link_check[4].A @ transl(0, -0.31, 0) @ trotx(-pi/2) #according to the schematics, its at the wrist point so it needs to be translatsed and offset. 4th adjustment. 0-.25, -0.3, -0.325. -0.32.
+
+#link 5
+
+
+#link 6
+
+
+
 env.add(base_mesh)
 env.add(link_1_mesh)
 env.add(link_2_mesh)
 env.add(link_3_mesh)
 env.step()
 input("Enter to continue\n")
-
-#test move so you can see the meshes follow the joints
-q_goal = np.array([pi/4, pi/4, -pi/6, pi/3, pi/3, 0])
-for q in jtraj(q, q_goal, 50).q:
-    robot.q = q
-    link_check = robot.fkine_all(q)
-    base_mesh.T = link_check[0].A
-    link_1_mesh.T = link_check[1].A @ trotx(-pi/2)
-    link_2_mesh.T = link_check[2].A @ transl(-0.29, 0, 0) @ trotz(-pi/2) @ trotx(-pi/2)
-    link_3_mesh.T = link_check[3].A
-    env.step(0.05)
-
-input("Enter to finish\n")
