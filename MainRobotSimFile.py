@@ -31,5 +31,11 @@ cointreau_scene = Mesh(filename=cointreau_location, color="#C47C07", scale=[0.02
 cointreau_scene.T = SE3(0.5, 0.5, 0.01)
 env.add(cointreau_scene)
 
+#lemon.stl 
+lemon_location = os.path.join(item_folder, "Lemon.stl")
+lemon_scene = Mesh(filename=lemon_location, color="#F7F7A1")
+lemon_scene.T = SE3(0.2, 0.2, 0.02)
+env.add(lemon_scene)
+
 env.step()
 input("Press Enter to continue...")
