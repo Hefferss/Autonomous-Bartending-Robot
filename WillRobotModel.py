@@ -28,6 +28,7 @@ q = np.array([0, 0, 0, 0, 0, 0]) #vertical pose, same as the stls
 env = swift.Swift()
 env.launch(realtime=True)
 env.add(robot)
+robot.base = transl(-0.15, -0.2675, 0)              #Set the base to the origins
 robot.q = q
 env.step()
 
