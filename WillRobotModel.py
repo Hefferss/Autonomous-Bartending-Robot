@@ -6,6 +6,7 @@ from ir_support import CylindricalDHRobotPlot
 import os
 from spatialgeometry import Mesh
 from spatialmath.base import trotx, trotz, troty, transl
+from spatialmath import SE3
 
 # Z is d, X is a
 
@@ -21,8 +22,8 @@ robot = DHRobot([link1, link2, link3, link4, link5, link6], name='Kawasaki RS007
 q = np.array([0, 0, 0, 0, 0, 0]) #vertical pose, same as the stls
 
 #test cylinders to add to robot. comment out later. same as A1
-#cyl_viz = CylindricalDHRobotPlot(robot, cylinder_radius=0.025, color="#7b1d1d")
-#robot = cyl_viz.create_cylinders()
+cyl_viz = CylindricalDHRobotPlot(robot, cylinder_radius=0.025, color="#7b1d1d")
+robot = cyl_viz.create_cylinders()
 
 #sets up environment and robot.
 env = swift.Swift()
@@ -81,3 +82,21 @@ env.add(link_5_mesh)
 env.add(link_6_mesh)
 env.step()
 input("Enter to continue\n")
+
+stls = [base_mesh, link_1_mesh, link_2_mesh, link_3_mesh, link_4_mesh, link_5_mesh, link_6_mesh]
+
+target_position = SE3(0.5, 0.5, 0.5)  # Example target position
+result = robot.ikine_LM(target_position, q0=np.zeros(6), mask=[1,1,1,0,0,0])
+target_position = result.q
+
+steps = 50
+test_movement = jtraj(q, target_position, steps)
+for q in test_movement.q:
+    robot.q = q
+    link_check = robot.fkine_all(q)
+    for i in range (len(stls)):
+        stls[i].T = link_check[i].A
+    env.step()
+    
+print("Current joint angles:", q)
+input("Press Enter to complete test")
