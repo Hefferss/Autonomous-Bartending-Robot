@@ -1,6 +1,6 @@
 RSOO7N reach - 
 Staubli reach - 670 mm reach
-IRB 140 reach - 
+IRB 140 reach - 810 mm 
 UR3 reach - around 500mm from what i could see?
 
 *robot positions*
