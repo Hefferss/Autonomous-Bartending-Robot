@@ -25,9 +25,7 @@ class Assignment2():
 
     # def meshIN(self):
 
-
-
-        
+  
 
     def Arm(self):
         """
@@ -36,7 +34,7 @@ class Assignment2():
 
         link1 = DHLink(d=0.352, a=0.0000, alpha=0, qlim=[-pi, pi]) # DH perameters d = offset a = link length A = relative rotation theta = varibale angle 
         link2 = DHLink(d=0.0, a=-0.0700, alpha=-pi/2, qlim=[-pi, pi]) 
-        link3 = DHLink(d=0.0, a=-0.3600, alpha=0, qlim=[-pi, pi])
+        link3 = DHLink(d=0.0, a=0.3600, alpha=0, qlim=[-pi, pi])
         link4 = DHLink(d=0.380, a=0.0000, alpha=-pi/2, qlim=[-pi, pi])
         link5 = DHLink(d=0.0780, a=0.0000, alpha=pi/2, qlim=[-pi, pi])
         link6 = DHLink(d=0.0650, a=0.0000, alpha=-pi/2, qlim=[-pi, pi])
@@ -55,38 +53,42 @@ class Assignment2():
         mesh_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "IRB_Robot_Files")
         link_check = robot.fkine_all(q) #checks all locations of the robot and lists. used to update position each time. maybe theres a better way?
 
+        # base_location = os.path.join(mesh_folder, "wBase.stl")
+        # base_mesh = Mesh(filename=base_location, color="#5B5B5B8D", scale=[0.001, 0.001, 0.001]) 
+        # base_mesh.T = link_check[0].A @ trotz(-pi/2) @ transl(-0.15, -0.2675, 0) 
+
         #Base link
         base_location = os.path.join(mesh_folder, "base.stl")
-        base_mesh = Mesh(filename=base_location, color="#6e6e6e") #red because its the same as my last one and it was ugly as gray.
+        base_mesh = Mesh(filename=base_location, color="#6e6e6e", scale=[0.001, 0.001, 0.001]) #red because its the same as my last one and it was ugly as gray.
         base_mesh.T = link_check[0].A
 
         #link 1
         link_1_location = os.path.join(mesh_folder, "link 1.stl")
-        link_1_mesh = Mesh(filename=link_1_location, color="#6e6e6e")
+        link_1_mesh = Mesh(filename=link_1_location, color="#6e6e6e", scale=[0.001, 0.001, 0.001])
         link_1_mesh.T = link_check[1].A @ trotx(-pi/2)
 
         #link 2
         link_2_location = os.path.join(mesh_folder, "link 2.stl")
-        link_2_mesh = Mesh(filename=link_2_location, color="#6e6e6e")
+        link_2_mesh = Mesh(filename=link_2_location, color="#6e6e6e", scale=[0.001, 0.001, 0.001])
         link_2_mesh.T = link_check[2].A @ transl(-0.29, 0, 0) @ trotz(-pi/2) @ trotx(-pi/2) #dh frame is at elbow, stl origin at shoulder
 
         #link 3
-        link_3_location = os.path.join(mesh_folder, "link 3.stl")
+        link_3_location = os.path.join(mesh_folder, "link 3.stl", scale=[0.001, 0.001, 0.001])
         link_3_mesh = Mesh(filename=link_3_location, color="#6e6e6e")
         link_3_mesh.T = link_check[3].A
 
         #link 4
-        link_4_location = os.path.join(mesh_folder, "link 4.stl")
+        link_4_location = os.path.join(mesh_folder, "link 4.stl", scale=[0.001, 0.001, 0.001])
         link_4_mesh = Mesh(filename=link_4_location, color="#6e6e6e")
         link_4_mesh.T = link_check[4].A @ transl(0, -0.31, 0) @ trotx(-pi/2) #according to the schematics, its at the wrist point so it needs to be translatsed and offset. 4th adjustment. 0-.25, -0.3, -0.325. -0.32.
 
         #link 5
-        link_5_location = os.path.join(mesh_folder, "link 5.stl")
+        link_5_location = os.path.join(mesh_folder, "link 5.stl", scale=[0.001, 0.001, 0.001])
         link_5_mesh = Mesh(filename=link_5_location, color="#6e6e6e")
         link_5_mesh.T = link_check[5].A 
 
         #link 6 
-        link_6_location = os.path.join(mesh_folder, "link 6.stl")
+        link_6_location = os.path.join(mesh_folder, "link 6.stl", scale=[0.001, 0.001, 0.001])
         link_6_mesh = Mesh(filename=link_6_location, color="#6e6e6e")
         link_6_mesh.T = link_check[6].A #no transform needed, lines up already
 
