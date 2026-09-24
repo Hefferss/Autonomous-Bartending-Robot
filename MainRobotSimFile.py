@@ -38,10 +38,9 @@ lemon_scene.T = SE3(0.2, 0.2, 0.02)
 env.add(lemon_scene)
 
 #bar_table.stl
-bar_table_location = os.path.join(item_folder, "bar.stl")
+bar_table_location = os.path.join(item_folder, "BarTableRobot.stl")
 bar_table_scene = Mesh(filename=bar_table_location, color="#8B4513", scale=[0.001, 0.001, 0.001])
-bar_table_scene.T = SE3(0.5, 0.5, 0.01)
+bar_table_scene.T = SE3(-1.5, 0.5, 0)
 env.add(bar_table_scene)
-env.step()
 
 input("Press Enter to continue...")
