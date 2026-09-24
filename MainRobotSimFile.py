@@ -55,4 +55,16 @@ Better_lemon_scene = Mesh(filename=Better_lemon_location, color="#F7F7A1", scale
 Better_lemon_scene.T = SE3(-0.2, -0.1, 0.255) * troty(pi/2)
 env.add(Better_lemon_scene)
 
+#UR3 rail
+ur3_rail_location = os.path.join(item_folder, "RailForUR3.stl")
+ur3_rail_scene = Mesh(filename=ur3_rail_location, color="#C0C0C0", scale=[0.001, 0.001, 0.001])
+ur3_rail_scene.T = SE3(-1.5, 0.1, 0)
+env.add(ur3_rail_scene)
+
+#UR3 Base
+ur3_base_location = os.path.join(item_folder, "BasePlatForUR3.stl")
+ur3_base_scene = Mesh(filename=ur3_base_location, color="#430F98", scale=[0.001, 0.001, 0.001])
+ur3_base_scene.T = SE3(0, 0.1, 0.15)
+env.add(ur3_base_scene)
+
 input("Press Enter to continue...")
