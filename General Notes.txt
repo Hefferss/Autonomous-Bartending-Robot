@@ -4,7 +4,8 @@ IRB 140 reach -
 UR3 reach - around 500mm from what i could see?
 
 *robot positions*
-UR3 position - 0,0,0 (acting as basepoint, z may rise depending on height of table)
+UR3 position - 0,0,0.25. it'll move around either on a linear rail or a turtlebot. Decide in meeting. 
+
 
 *moving object original positions and movements*
 - all objects to be poured will be situated at -0.25m behind the robot in the x direction. table will be at the same height as the UR3 base
