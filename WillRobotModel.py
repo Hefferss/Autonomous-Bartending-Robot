@@ -65,7 +65,7 @@ link_4_location = os.path.join(mesh_folder, "wLink4.stl")
 link_4_mesh = Mesh(filename=link_4_location, color="#5B5B5B8D", scale=[0.001, 0.001, 0.001])
 link_4_mesh.T = link_check[4].A @ trotx(-pi/2) @ trotz(-pi/2) @ transl(-0.15, -0.2675, -1.090)
 
-#link 5 tab
+#link 5
 link_5_location = os.path.join(mesh_folder, "wLink5.stl")
 link_5_mesh = Mesh(filename=link_5_location, color="#5B5B5B8D", scale=[0.001, 0.001, 0.001])
 link_5_mesh.T = link_check[5].A @ trotz(-pi/2) @ transl(-0.15, -0.2675, -1.090)
@@ -85,7 +85,7 @@ env.add(link_6_mesh)
 env.step()
 input("Enter to continue\n")
 
-T_target = SE3(0.2, 0.3, 0.4)* SE3.Rx(pi)
+T_target = SE3(-0.2, 0.1, 0.5)* SE3.Rx(pi)
 
 ik_sol = robot.ikine_LM(T_target)
 
@@ -107,8 +107,8 @@ for q_step in traj.q:
     link_2_mesh.T = link_check[2].A @ trotx(-pi/2) @ troty(pi/2) @ trotz(-pi/2) @ transl(-0.15, -0.2675, -0.715)
     link_3_mesh.T = link_check[3].A @ trotz(-pi/2) @ transl(-0.15, -0.2675, -0.715)
     link_4_mesh.T = link_check[4].A @ trotx(-pi/2)  @ trotz(-pi/2) @ transl(-0.15, -0.2675, -1.090)
-    link_5_mesh.T = link_check[5].A @ trotz(-pi/2) @ transl(-0.15, -0.2675, -1.090) #tab
-    link_6_mesh.T = link_check[6].A @ trotz(-pi/2) @ transl(-0.15, -0.2675, -1.168) # Adjusted if needed
+    link_5_mesh.T = link_check[5].A @ trotz(-pi/2) @ transl(-0.15, -0.2675, -1.090)
+    link_6_mesh.T = link_check[6].A @ trotz(-pi/2) @ transl(-0.15, -0.2675, -1.168)
     
     env.step()
 
