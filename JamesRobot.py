@@ -53,10 +53,6 @@ class Assignment2():
         mesh_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "IRB_Robot_Files")
         link_check = robot.fkine_all(q) #checks all locations of the robot and lists. used to update position each time. maybe theres a better way?
 
-        # base_location = os.path.join(mesh_folder, "wBase.stl")
-        # base_mesh = Mesh(filename=base_location, color="#5B5B5B8D", scale=[0.001, 0.001, 0.001]) 
-        # base_mesh.T = link_check[0].A @ trotz(-pi/2) @ transl(-0.15, -0.2675, 0) 
-
         #Base link
         base_location = os.path.join(mesh_folder, "base.stl")
         base_mesh = Mesh(filename=base_location, color="#39FF14", scale=[0.001, 0.001, 0.001]) #red because its the same as my last one and it was ugly as gray.
@@ -65,32 +61,31 @@ class Assignment2():
         #link 1
         link_1_location = os.path.join(mesh_folder, "link 1.stl")
         link_1_mesh = Mesh(filename=link_1_location, color="#39FF14", scale=[0.001, 0.001, 0.001])
-        link_1_mesh.T = link_check[1].A @ trotx(-pi/2)
+        link_1_mesh.T = link_check[1].A 
 
         #link 2
         link_2_location = os.path.join(mesh_folder, "link 2.stl")
         link_2_mesh = Mesh(filename=link_2_location, color="#39FF14", scale=[0.001, 0.001, 0.001])
-        link_2_mesh.T = link_check[2].A @ transl(-0.29, 0, 0) @ trotz(-pi/2) @ trotx(-pi/2) #dh frame is at elbow, stl origin at shoulder
+        link_2_mesh.T = link_check[2].A @ transl(-0.07, 0, -0.352)
 
         #link 3
         link_3_location = os.path.join(mesh_folder, "link 3.stl")
         link_3_mesh = Mesh(filename=link_3_location, color="#39FF14", scale=[0.001, 0.001, 0.001])
-        link_3_mesh.T = link_check[3].A
+        link_3_mesh.T = link_check[3].A @ transl(-0.07, 0.065, -0.712)
 
         #link 4
         link_4_location = os.path.join(mesh_folder, "link 4.stl")
         link_4_mesh = Mesh(filename=link_4_location, color="#39FF14", scale=[0.001, 0.001, 0.001])
-        link_4_mesh.T = link_check[4].A @ transl(0, -0.31, 0) @ trotx(-pi/2) #according to the schematics, its at the wrist point so it needs to be translatsed and offset. 4th adjustment. 0-.25, -0.3, -0.325. -0.32.
-
+        link_4_mesh.T = link_check[4].A @ transl(-0.309, 0, -0.712)
         #link 5
         link_5_location = os.path.join(mesh_folder, "link 5.stl")
         link_5_mesh = Mesh(filename=link_5_location, color="#39FF14", scale=[0.001, 0.001, 0.001])
-        link_5_mesh.T = link_check[5].A 
+        link_5_mesh.T = link_check[5].A @ transl(-0.450, 0, -0.712)
 
         #link 6 
         link_6_location = os.path.join(mesh_folder, "link 6.stl")
         link_6_mesh = Mesh(filename=link_6_location, color="#39FF14", scale=[0.001, 0.001, 0.001])
-        link_6_mesh.T = link_check[6].A #no transform needed, lines up already
+        link_6_mesh.T = link_check[6].A @ transl(-0.515, 0, -0.712)
 
 
         self.env.add(base_mesh)
@@ -105,9 +100,9 @@ class Assignment2():
 
 
 
-        # cyl_viz = CylindricalDHRobotPlot(robot, cylinder_radius=0.05, color="#702963")
-        # robot = cyl_viz.create_cylinders()
-        # self.env.add(robot)
+        cyl_viz = CylindricalDHRobotPlot(robot, cylinder_radius=0.05, color="#702963")
+        robot = cyl_viz.create_cylinders()
+        self.env.add(robot)
 
 
         
