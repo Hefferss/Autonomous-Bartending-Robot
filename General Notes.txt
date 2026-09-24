@@ -1,7 +1,7 @@
 RSOO7N reach - 
 Staubli reach - 670 mm reach
-IRB 140 reach - 810 mm 
-UR3 reach - around 500mm from what i could see?
+IRB 140 reach - 810 mm reach
+UR3 reach - 540 mm according to https://www.universal-robots.com/products/ur3e-540/
 
 *robot positions*
 UR3 position - 0,0,0.25. it'll move around either on a linear rail or a turtlebot. Decide in meeting. 
