@@ -42,5 +42,6 @@ def UR3_move_and_grab(env, ur3, item, item_name="item", steps=30): #move the UR3
     item.T = ur3.fkine(ur3.q).A  # attach item to end-effector
     env.step()
 
-
-    print("Item picked up:", item_name)
+def set_UR3_pose(ur3, ur3_base_scene, pose):
+    ur3_base_scene.T = pose
+    ur3.base = pose * SE3(0.08, 0, 0.1)

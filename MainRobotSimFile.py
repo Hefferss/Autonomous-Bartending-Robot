@@ -14,7 +14,7 @@ from spatialmath import SE3
 from spatialmath.base import transl, trotx, troty, trotz, tr2rpy
 from roboticstoolbox import jtraj
 from ir_support import tranimate_custom
-from UR3 import add_UR3, UR3_move_base, UR3_move_and_grab
+from UR3 import add_UR3, UR3_move_base, UR3_move_and_grab, set_UR3_pose
 
 env = swift.Swift()
 env.launch(realtime=True)
@@ -62,7 +62,9 @@ ur3_rail_scene = Mesh(filename=ur3_rail_location, color="#C0C0C0", scale=[0.001,
 ur3_rail_scene.T = SE3(-1.5, 0.1, 0)
 env.add(ur3_rail_scene)
 
-#UR3 Base and robot
+#UR3 Base
 ur3, ur3_base_scene = add_UR3(env)
+set_UR3_pose(ur3, ur3_base_scene, SE3(0, 0.1, 0.15))
+env.step()
 
 input("Press Enter to continue...")
