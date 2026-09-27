@@ -20,7 +20,7 @@ def add_UR3(env):
 
     return ur3, ur3_base_scene
 
-def move_UR3(env, ur3, ur3_base_mesh, target_x, steps=30): #moves the UR3 base along the x-axis to a target position over a number of steps. should lock on rail. need to add a thing that makes sure it doesnt slide off lol.
+def UR3_move_base(env, ur3, ur3_base_mesh, target_x, steps=30): #moves the UR3 base along the x-axis to a target position over a number of steps. should lock on rail. need to add a thing that makes sure it doesnt slide off lol.
     start_x = ur3.base.t[0]
     move_step = (target_x - start_x) / steps
 
@@ -29,7 +29,7 @@ def move_UR3(env, ur3, ur3_base_mesh, target_x, steps=30): #moves the UR3 base a
         ur3_base_mesh.T = ur3_base_mesh.T * SE3(move_step, 0, 0)
         env.step(0.05)
 
-def UR3_move_to_item(env, ur3, item, item_name ="item", steps=30): #move the UR3 to item position and attach it to the end-effector. uses inverse kinematics to find the joint angles needed to reach the item. also attaches it. would be a seperate command but i think concantenating it like this would be a wise decision here.
+def UR3_move_and_grab(env, ur3, item, item_name="item", steps=30): #move the UR3 to item position and attach it to the end-effector. uses inverse kinematics to find the joint angles needed to reach the item. also attaches it. would be a seperate command but i think concantenating it like this would be a wise decision here.
     item_pos = item.T[0:3, 3] #gets item position
     target_pose = SE3(item_pos[0], item_pos[1], item_pos[2]) #gest xyz pos
     result = ur3.ikine_LM(target_pose, q0=ur3.q, mask=[1,1,1,0,0,0]) #usual
@@ -42,4 +42,5 @@ def UR3_move_to_item(env, ur3, item, item_name ="item", steps=30): #move the UR3
     item.T = ur3.fkine(ur3.q).A  # attach item to end-effector
     env.step()
 
-print("Item picked up:" , item.name)
+
+    print("Item picked up:", item_name)

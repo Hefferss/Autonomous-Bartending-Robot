@@ -11,9 +11,10 @@ from ir_support import CylindricalDHRobotPlot
 from ir_support_extra_robots.robots import Turtlebot3Waffle
 from ir_support_extra_parts.parts import part_mesh
 from spatialmath import SE3
-from spatialmath.base import transl, trotx, troty, trotz, tr2rpy, r2q
+from spatialmath.base import transl, trotx, troty, trotz, tr2rpy
 from roboticstoolbox import jtraj
 from ir_support import tranimate_custom
+from UR3 import add_UR3, UR3_move_base, UR3_move_and_grab
 
 env = swift.Swift()
 env.launch(realtime=True)
@@ -61,10 +62,7 @@ ur3_rail_scene = Mesh(filename=ur3_rail_location, color="#C0C0C0", scale=[0.001,
 ur3_rail_scene.T = SE3(-1.5, 0.1, 0)
 env.add(ur3_rail_scene)
 
-#UR3 Base
-ur3_base_location = os.path.join(item_folder, "BasePlatForUR3.stl")
-ur3_base_scene = Mesh(filename=ur3_base_location, color="#430F98", scale=[0.001, 0.001, 0.001])
-ur3_base_scene.T = SE3(0, 0.1, 0.15)
-env.add(ur3_base_scene)
+#UR3 Base and robot
+ur3, ur3_base_scene = add_UR3(env)
 
 input("Press Enter to continue...")
