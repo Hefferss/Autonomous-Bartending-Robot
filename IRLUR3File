@@ -90,7 +90,7 @@ if __name__ == '__main__':
     point_b = [-np.pi/6, -np.pi/2, np.pi/6, -np.pi/2, 0.0, 0.0]  # point B, should also be shifted enough away that its fine
     
     #loading for swift. take out for actual test. or comment out. id rather its commented out.
-    nv = swift.Swift()
+    env = swift.Swift()
     env.launch(realtime=True)
     ur3 = UR3e()
     ur3.add_to_env(env)
