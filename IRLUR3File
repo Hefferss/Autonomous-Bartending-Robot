@@ -97,6 +97,18 @@ if __name__ == '__main__':
     ur3.q = vertical
     env.step()
     
+    #move robot to vertical position, 5 seconds to get there, 5 seconds wait. 
+    
+    #robot moves to positoin A, 5 seconds to get there, 5 seconds wait.
+    
+    #robot moves to position B, 5 seconds to get there, 5 seconds wait.
+    
+    #robot moves back to position A, 5 seconds to get there, 5 seconds wait.
+    
+    #robot moves back to vertical position, 5 seconds to get there, 5 seconds wait.
+    
+    #robot does a frontflip
+    
     client = roslibpy.Ros(host='192.168.27.1', port=9090)  # Replace with your ROS bridge IP
     client.run()
     try:
