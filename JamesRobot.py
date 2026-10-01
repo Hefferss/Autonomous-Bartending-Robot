@@ -56,36 +56,37 @@ class Assignment2():
         #Base link
         base_location = os.path.join(mesh_folder, "base.stl")
         base_mesh = Mesh(filename=base_location, color="#39FF14", scale=[0.001, 0.001, 0.001]) #red because its the same as my last one and it was ugly as gray.
-        base_mesh.T = link_check[0].A
+        base_mesh.T = link_check[0].A @ transl(-0.31, -0.2, 0)
 
         #link 1
         link_1_location = os.path.join(mesh_folder, "link 1.stl")
         link_1_mesh = Mesh(filename=link_1_location, color="#39FF14", scale=[0.001, 0.001, 0.001])
-        link_1_mesh.T = link_check[1].A 
+        link_1_mesh.T = link_check[1].A @ transl(-0.15, -0.13, -0.345)
 
         #link 2
         link_2_location = os.path.join(mesh_folder, "link 2.stl")
         link_2_mesh = Mesh(filename=link_2_location, color="#39FF14", scale=[0.001, 0.001, 0.001])
-        link_2_mesh.T = link_check[2].A @ transl(-0.07, 0, -0.352)
+        link_2_mesh.T = link_check[2].A @ transl(-0.105, 0.35, 0.05) @ trotz(-pi/2) @ troty(pi/2)
 
         #link 3
         link_3_location = os.path.join(mesh_folder, "link 3.stl")
         link_3_mesh = Mesh(filename=link_3_location, color="#39FF14", scale=[0.001, 0.001, 0.001])
-        link_3_mesh.T = link_check[3].A @ transl(-0.07, 0.065, -0.712)
+        link_3_mesh.T = link_check[3].A @ transl(-0.7, 0.17, -0.2) @ troty(pi/2) @ trotz(pi)
 
         #link 4
         link_4_location = os.path.join(mesh_folder, "link 4.stl")
         link_4_mesh = Mesh(filename=link_4_location, color="#39FF14", scale=[0.001, 0.001, 0.001])
-        link_4_mesh.T = link_check[4].A @ transl(-0.309, 0, -0.712)
+        link_4_mesh.T = link_check[4].A @ transl(0.725, 0.5, 0.025) @ trotx(pi/2) @ troty(-pi/2)
+
         #link 5
         link_5_location = os.path.join(mesh_folder, "link 5.stl")
         link_5_mesh = Mesh(filename=link_5_location, color="#39FF14", scale=[0.001, 0.001, 0.001])
-        link_5_mesh.T = link_check[5].A @ transl(-0.450, 0, -0.712)
+        link_5_mesh.T = link_check[5].A @ transl(-0.43, -0.005, -0.76) 
 
         #link 6 
         link_6_location = os.path.join(mesh_folder, "link 6.stl")
         link_6_mesh = Mesh(filename=link_6_location, color="#39FF14", scale=[0.001, 0.001, 0.001])
-        link_6_mesh.T = link_check[6].A @ transl(-0.515, 0, -0.712)
+        link_6_mesh.T = link_check[6].A @transl(-0.5, -0.5, -0.72)
 
 
         self.env.add(base_mesh)
