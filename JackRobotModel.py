@@ -85,11 +85,32 @@ input("Enter to continue\n")
 #draw the elipsoids in swift. visual only, not needed for the collision check
 elipsoid_transparency = 0.25
 sphere_location = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Scene_parts", "CollisionSphere.stl")
+elipsoid_meshes = [] #keeps the drawn elipsoids so they can be moved later
 for elipsoid_info in elipsoids_for_robot_around_links(robot, q): #for each link....
     centre, rotation, radii = elipsoid_parameters_for_robots(elipsoid_info) #where, which way, how big. taken from the elipsoid info stuff above. makes it into a 3D mesh for swift. uses the ellipsoid method from week 4.
     elipsoid_mesh = Mesh(filename=sphere_location, scale=radii/1000, color="#41b3f9") #stretches sphere by teh radii, and also makes it blue. lab 6 2.1 and 2.2
-    elipsoid_mesh.opacity = elipsoid_transparency #makes it transparent so you can see the robot through it. lab 6 2.3
+    elipsoid_mesh.set_alpha(elipsoid_transparency) #makes it transparent so you can see the robot through it. 
     elipsoid_mesh.T = rt2tr(rotation, centre) #places it, rotation + centre in one 4x4. same stuff as lab 2
     env.add(elipsoid_mesh)
+    elipsoid_meshes.append(elipsoid_mesh) #save it in the list
 env.step()
+input("Enter to continue\n")
+
+#make the robot move, with the link meshes following
+q_goal = np.array([-pi/2, 0, -pi/4, 0, 0, 0]) #arm out to the side. just an arbitrary pose to test the meshes. 
+for q_step in jtraj(q, q_goal, 50).q: #50 steps from vertical to q_goal. 
+    robot.q = q_step
+    link_check = robot.fkine_all(q_step) #where every joint is at this step
+    base_mesh.T = link_check[0].A
+    link_1_mesh.T = link_check[1].A @ trotx(-pi/2)
+    link_2_mesh.T = link_check[2].A @ transl(-0.29, 0, 0) @ trotz(-pi/2) @ trotx(-pi/2)
+    link_3_mesh.T = link_check[3].A
+    link_4_mesh.T = link_check[4].A @ transl(0, -0.31, 0) @ trotx(-pi/2)
+    link_5_mesh.T = link_check[5].A
+    link_6_mesh.T = link_check[6].A
+    elipsoids = elipsoids_for_robot_around_links(robot, q_step) #where the elipsoids should be at this step
+    for i in range(len(elipsoid_meshes)): #for each drawn elipsoid
+        centre, rotation, radii = elipsoid_parameters_for_robots(elipsoids[i]) #where, which way, how big
+        elipsoid_meshes[i].T = rt2tr(rotation, centre) #move it there
+    env.step(0.05)
 input("Enter to continue\n")

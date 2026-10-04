@@ -19,6 +19,8 @@ def elipsoids_for_robot_around_links(robot,q): #will be called every time j traj
     for i in range(len(Joint_Pos_Rotation)-1): #for each link (between joint i and i+1):
             Elipsoid_vector = Joint_Pos_Rotation[i+1][:3,3] - Joint_Pos_Rotation[i][:3,3] #arrow from this joint to the next, along the link.
             Elipsoid_width = np.array([-Elipsoid_vector[1], Elipsoid_vector[0], 0]) #left and right of the link
+            if np.linalg.norm(Elipsoid_width) == 0: #link 5 has no length, so the width is zero. make it a flat direction instead of zero.
+                Elipsoid_width = np.array([1, 0, 0]) #any flat direction is sideways to a vertical link
             Elipsoid_height = np.cross(Elipsoid_vector, Elipsoid_width) #up and down from the link
             Elipsoid_centre = (Joint_Pos_Rotation[i+1][:3,3] + Joint_Pos_Rotation[i][:3,3])/2 #middle of the link, where the elipsoid sits. halfway between the two joints. Lab 6 2.5
             
@@ -41,6 +43,8 @@ def elipsoids_for_robot_around_links(robot,q): #will be called every time j traj
 def elipsoid_parameters_for_robots(elipsoid_info): #takes the elipsoid info and makes it into a 3D mesh for swift. uses the ellipsoid method from week 4. 
     eigen_values, Eigen_vectors = np.linalg.eigh(elipsoid_info['matrix']) #taken from IR support in week 6. splits it into eigenvalues and eigenvectors so that they can be used:
     Elipsoid_rotation = Eigen_vectors #uses the 3 vectors to rotate the elipsoid so it matches up with the link. same as in lab 6 q2.
+    if np.linalg.det(Elipsoid_rotation) < 0: #if it comes out negative, flip one of the directions so it is positive. same as in lab 6 q2.
+        Elipsoid_rotation[:, 0] = -Elipsoid_rotation[:, 0] #flip one direction, elipsoid is the same either way
     Elipsoid_radius_xyz = np.sqrt(eigen_values) #takes teh eigenvalues and makes them into the radii of the elipsoid. same as in lab 6 q2.
     return elipsoid_info['center'], Elipsoid_rotation, Elipsoid_radius_xyz
 
