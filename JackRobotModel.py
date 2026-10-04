@@ -4,9 +4,10 @@ from roboticstoolbox import DHLink, DHRobot, jtraj
 from math import pi
 from ir_support import CylindricalDHRobotPlot
 import os
-from spatialmath.base import ellipsoid, trotx, trotz, troty, transl
+from spatialmath.base import ellipsoid, trotx, trotz, troty, transl, rt2tr
 from spatialmath import SE3
 from spatialgeometry import Mesh
+from CollisionEllipsoid import elipsoids_for_robot_around_links, elipsoid_parameters_for_robots
 
 #links for the staubli. the qlims are specific. yay.
 link1 = DHLink(d=0.375, a=0, alpha=pi/2, qlim=[-pi, pi]) #0.375 from sheet, lines up with stl now mesh transforms are right
@@ -77,5 +78,18 @@ env.add(link_3_mesh)
 env.add(link_4_mesh)
 env.add(link_5_mesh)
 env.add(link_6_mesh)
+env.step()
+input("Enter to continue\n")
+
+#Apply Collision detection mesh
+#draw the elipsoids in swift. visual only, not needed for the collision check
+elipsoid_transparency = 0.25
+sphere_location = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Scene_parts", "CollisionSphere.stl")
+for elipsoid_info in elipsoids_for_robot_around_links(robot, q): #for each link....
+    centre, rotation, radii = elipsoid_parameters_for_robots(elipsoid_info) #where, which way, how big. taken from the elipsoid info stuff above. makes it into a 3D mesh for swift. uses the ellipsoid method from week 4.
+    elipsoid_mesh = Mesh(filename=sphere_location, scale=radii/1000, color="#41b3f9") #stretches sphere by teh radii, and also makes it blue. lab 6 2.1 and 2.2
+    elipsoid_mesh.opacity = elipsoid_transparency #makes it transparent so you can see the robot through it. lab 6 2.3
+    elipsoid_mesh.T = rt2tr(rotation, centre) #places it, rotation + centre in one 4x4. same stuff as lab 2
+    env.add(elipsoid_mesh)
 env.step()
 input("Enter to continue\n")
