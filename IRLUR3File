@@ -3,7 +3,7 @@ import time
 import roslibpy
 import numpy as np
 import swift
-from ir_support.robots import UR3e
+from ir_support.robots import UR3
 from roboticstoolbox import jtraj
 
 current_pos = None
@@ -86,13 +86,13 @@ if __name__ == '__main__':
     
     
     vertical = [0.0, -np.pi/2, 0.0, -np.pi/2, 0.0, 0.0] #first point, vertical (same as the original)
-    point_a = [np.pi/6, -np.pi/2, np.pi/6, -np.pi/2, 0.0, 0.0]  # point A, should be shifted enough away that its fine
-    point_b = [-np.pi/6, -np.pi/2, np.pi/6, -np.pi/2, 0.0, 0.0]  # point B, should also be shifted enough away that its fine
+    point_a = [np.pi/2, -np.pi/1.25, np.pi/1.5, -np.pi/1.25, 0.0, 0.0]  # point A, should be shifted enough away that its fine
+    point_b = [-np.pi/2, -np.pi/1.25, np.pi/1.5, -np.pi/1.25, 0.0, 0.0]  # point B, should also be shifted enough away that its fine
     
     #loading for swift. take out for actual test. or comment out. id rather its commented out.
     env = swift.Swift()
     env.launch(realtime=True)
-    ur3 = UR3e()
+    ur3 = UR3()
     ur3.add_to_env(env)
     ur3.q = vertical
     env.step()
@@ -119,4 +119,4 @@ if __name__ == '__main__':
             #move_ur_joint_positions(client, point, duration) #uncomment for actual
             time.sleep(5.0)  # 5 second delays
     except KeyboardInterrupt:
-        print("\n[APP] Interrupted by user.")
+        print("\n[APP] Interrupted by user.")   

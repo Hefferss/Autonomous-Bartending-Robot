@@ -44,10 +44,16 @@ bar_table_scene = Mesh(filename=bar_table_location, color="#8B4513", scale=[0.00
 bar_table_scene.T = SE3(-1.5, 0.5, 0)
 env.add(bar_table_scene)
 
+#SensorsTable
+sensors_table_location = os.path.join(item_folder, "SensorsTable.stl")
+sensors_table_scene = Mesh(filename=sensors_table_location, color="#8B4513", scale=[0.001, 0.001, 0.001])
+sensors_table_scene.T = SE3(1.85,0,0) * trotz(pi/2) * SE3(0,0.25,0)
+env.add(sensors_table_scene)
+
 #BarTableStorage.stl
 bar_table_storage_location = os.path.join(item_folder, "BarTableStorage.stl")
 bar_table_storage_scene = Mesh(filename=bar_table_storage_location, color="#8B4513", scale=[0.001, 0.001, 0.001])
-bar_table_storage_scene.T = SE3(-0.5, -0.5, 0)
+bar_table_storage_scene.T = SE3(-0.5, -0.5, 0) 
 env.add(bar_table_storage_scene)
 
 #BetterLemon.stl
@@ -96,5 +102,4 @@ env.add(Lemon_pot_scene)
 ur3, ur3_base_scene = add_UR3(env)
 set_UR3_pose(ur3, ur3_base_scene, SE3(0, 0.1, 0.15))
 env.step()
-
 input("Press Enter to continue...")
