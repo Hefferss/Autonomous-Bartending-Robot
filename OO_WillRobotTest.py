@@ -19,7 +19,7 @@ from spatialmath.base import trotx, trotz, troty, transl  # rotation/translation
 class KawasakiRS007N:
 
     # ---- Constructor: builds everything about this robot --------------
-    def __init__(self):
+    def __init__(self, base=None):
 
         # -- Block 1: the DH links --
         # Overview: one DHLink per joint, values from the Kawasaki
@@ -35,6 +35,9 @@ class KawasakiRS007N:
         self.robot = DHRobot([link1, link2, link3, link4, link5, link6], name='Kawasaki RS007N')
         cyl_viz = CylindricalDHRobotPlot(self.robot, cylinder_radius=0.025, color="#7b1d1d")
         self.robot = cyl_viz.create_cylinders()
+        if base is not None: #was a base position given?
+            self.robot.base = base #yes, move the whole robot there
+        
 
         # -- Block 3: home pose --
         self.home_q = [0, pi/2, -pi/2, 0, -pi/4, 0]     # vertical pose, same as the STLs
