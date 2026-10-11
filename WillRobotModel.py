@@ -19,8 +19,8 @@ link5 = DHLink(d=0, a=0, alpha=-pi/2, qlim=[-125*pi/180, 125*pi/180])           
 link6 = DHLink(d=0.078, a=0, alpha=0, qlim=[-360*pi/180, 360*pi/180])                            # JT6, "Wrist Twist"
 
 robot = DHRobot([link1, link2, link3, link4, link5, link6], name='Kawasaki RS007N')
-q = np.array([0, pi/2, -pi/2, 0, -pi/4, 0]) #vertical pose, same as the stls
-#q = np.array([0, 0, 0, 0, 0, 0]) #default pose
+#q = np.array([0, pi/2, -pi/2, 0, -pi/4, 0]) #vertical pose, same as the stls
+q = np.array([0, 0, 0, 0, 0, 0]) #default pose
 
 #test cylinders to add to robot. comment out later. same as A1
 cyl_viz = CylindricalDHRobotPlot(robot, cylinder_radius=0.025, color="#7b1d1d")
