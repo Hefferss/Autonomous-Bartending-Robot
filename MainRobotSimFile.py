@@ -15,6 +15,7 @@ from spatialmath.base import transl, trotx, troty, trotz, tr2rpy
 from roboticstoolbox import jtraj
 from ir_support import tranimate_custom
 from UR3 import add_UR3, UR3_move_base, UR3_move_and_grab, set_UR3_pose
+from OO_JackRobotTest import StaubliTX60
 
 env = swift.Swift()
 env.launch(realtime=True)
@@ -101,5 +102,14 @@ env.add(Lemon_pot_scene)
 #UR3 Base
 ur3, ur3_base_scene = add_UR3(env)
 set_UR3_pose(ur3, ur3_base_scene, SE3(0, 0.1, 0.15))
+
+#Staubli (jacks robot) on the robot bar table
+staubli = StaubliTX60(base=transl(0, 0.75, 0.25)) #x, y, z. table is y 0.5 to 1.0 and 0.25 high, so this is the middle of it sitting on top
+env.add(staubli.robot)
+staubli.robot.q = staubli.home_q
+link_check = staubli.robot.fkine_all(staubli.home_q) #where every joint is, includes the base
+for i in range(len(staubli.meshes)): #put each stl on its link then add it
+    staubli.meshes[i].T = link_check[i].A @ staubli.offsets[i]
+    env.add(staubli.meshes[i])
 env.step()
 input("Press Enter to continue...")
