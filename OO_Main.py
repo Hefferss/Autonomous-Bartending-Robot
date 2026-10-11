@@ -1,17 +1,24 @@
-from math import pi
-from spatialmath import SE3 
-from OO_MovementCommands import Workcell
-from OO_GUI import RobotGUI
-from OO_WillRobotTest import KawasakiRS007N#Will's robot
-from OO_JamesRobotTest import ABBIRB140#james' robot
-from spatialmath.base import transl #needed to add this to move robots and such
-from OO_JackRobotTest import StaubliTX60 #jacks stuff
+# ======================================================================
+# OO_Main.py  --  the program you actually RUN
+#
+# Overview: makes the shared workcell, adds each robot to it, opens the
+# simulator, adds the GUI and hands control to the GUI loop.
+# To add a robot: import its setup class and add one add_robot() line.
+# ======================================================================
 
+# ---------------------------- IMPORTS ---------------------------------
+from math import pi                                  # the constant pi
+from spatialmath import SE3                          # poses (used for the target)
+from OO_MovementCommands import Workcell                  # the shared scene
+from OO_GUI import RobotGUI                             # the Swift GUI
+from OO_WillRobotTest import KawasakiRS007N           # robot-specific setup class
+from OO_JamesRobotTest import ABBIRB140              # robot-specific setup class
+# from ur3_setup import UR3Setup                     # <- example: another robot's setup class
 
-if __name__ == "__main__":
-    workcell = Workcell()
-    workcell.add_robot("James' Robot", ABBIRB140())# add the James Robot
-    workcell.add_robot("Jack's Robot", StaubliTX60(base=transl(1, 0, 0))) #add jacks robot
+# --------------------------- MAIN PROGRAM -----------------------------
+if __name__ == "__main__":                           # only run when this file is run directly
+    workcell = Workcell()                            # the ONE shared scene
+    workcell.add_robot("James' Robot", ABBIRB140())   # add the James Robot
     #workcell.add_robot("Will's Robot", KawasakiRS007N())   # add the Kawasaki under a name
     # workcell.add_robot("UR3", UR3Setup())          # <- add more robots the same way
     workcell.launch()                                # open Swift and show every robot
