@@ -6,6 +6,7 @@
 #     - EMERGENCY STOP, RESET E-STOP and RESTART buttons (affect ALL robots)
 #     - a coloured beacon: GREEN = RUNNING, RED = ESTOPPED, AMBER = RESET
 #     - a DROPDOWN to choose which robot the controls below act on
+#     - a DROPDOWN of camera views (edit OO_CameraAngles.py to add or change views)
 #     - joint sliders (degrees) for the selected robot
 #     - jog buttons (X, Y, Z) for the selected robot
 #
@@ -18,6 +19,7 @@ import swift                                  # gives us Button, Slider, Select 
 import numpy as np                            # for degree/radian conversion and arrays
 from spatialgeometry import Sphere            # the coloured state beacons
 from spatialmath.base import transl           # builds a 4x4 position matrix
+from OO_Camera import CAMERA_ANGLES     # the list of camera views (edit that file to change them)
 
 
 # --------------------------- THE GUI CLASS ----------------------------
@@ -27,7 +29,7 @@ class RobotGUI:
     # Overview: stores the workcell, a dictionary of demo poses (one per
     # robot name), the jog size, and which robot is selected to start with.
     def __init__(self, workcell, demo_targets=None, jog_step=0.02,
-                 beacon_position=(0, 0, 1.5)):
+                 beacon_position=(0, 0, 1.5), camera_angles=None):
         self.workcell = workcell                          # the shared scene
         self.demo_targets = demo_targets or {}            # robot name -> demo pose (may be empty)
         self.jog_step = jog_step                          # how far one jog click moves (metres)
@@ -36,6 +38,8 @@ class RobotGUI:
         self.selected = self.names[0]                     # start with the first robot selected
         self.pending = None                               # the next action waiting to run
         self.beacons = {}                                 # will hold one sphere per state
+        self.camera_angles = camera_angles or CAMERA_ANGLES   # name -> (position, look_at)
+        self.camera_names = list(self.camera_angles.keys())   # view names in dropdown order
 
     # ---- Current mover: the RobotMover of the selected robot ------------
     def current(self):
@@ -46,13 +50,17 @@ class RobotGUI:
         env = self.workcell.env                           # shortcut to the Swift window
 
         # -- Block 1: state beacons --
+        # One sphere per state, all added once. show_state() moves the sphere for
+        # the current state into view and parks the others very far away, where
+        # they are too small to see. (We never REMOVE spheres: removing objects
+        # from Swift crashes older versions on the next env.step().)
         # Colours are floats (0.0, 1.0) because whole-number lists break Swift on Windows.
         self.beacons["RUNNING"] = Sphere(radius=0.06, color=[0.0, 1.0, 0.0, 1.0])    # green
         self.beacons["ESTOPPED"] = Sphere(radius=0.06, color=[1.0, 0.0, 0.0, 1.0])   # red
         self.beacons["RESET"] = Sphere(radius=0.06, color=[1.0, 0.7, 0.0, 1.0])      # amber
         for beacon in self.beacons.values():              # go through each sphere
             env.add(beacon)                               # add it to the simulator
-        self.show_state()                                 # show the right one for the start state
+        self.show_state()                                 # put the right one in view
 
         # -- Block 2: operations (preset movements for the selected robot) --
         env.add(swift.Label("--- OPERATIONS ---"))
@@ -71,7 +79,14 @@ class RobotGUI:
         env.add(swift.Select(self.on_select_robot, desc="Control robot:",
                              options=self.names, value=0))
 
-        # -- Block 5: joint sliders --
+        # -- Block 5: camera view (dropdown) --
+        # The views come from OO_CameraAngles.py. The first one is applied now.
+        env.add(swift.Label("--- CAMERA ---"))
+        env.add(swift.Select(self.on_select_camera, desc="View:",
+                             options=self.camera_names, value=0))
+        self.set_camera(self.camera_names[0])             # start in the first view
+
+        # -- Block 6: joint sliders --
         # Make as many sliders as the robot with the MOST joints. Sliders
         # beyond the selected robot's joint count are simply ignored.
         env.add(swift.Label("--- JOINT CONTROL (degrees) ---"))
@@ -88,7 +103,7 @@ class RobotGUI:
                                   desc="Joint " + str(j + 1), unit="deg")
             env.add(slider)
 
-        # -- Block 6: jog buttons --
+        # -- Block 7: jog buttons --
         env.add(swift.Label("--- END EFFECTOR JOG ---"))
         s = self.jog_step                                 # short name for the step size
         jog_buttons = [("+X", (s, 0, 0)), ("-X", (-s, 0, 0)),     # name and (dx, dy, dz)
@@ -98,15 +113,18 @@ class RobotGUI:
             # "d=direction" locks in this button's direction
             env.add(swift.Button(lambda *args, d=direction: self.queue("jog", d), "Jog " + name))
 
-    # ---- Show state: moves the matching beacon into view ----------------
+    # ---- Show state: moves the matching beacon into view -----------------
+    # Overview: the sphere for the current state goes to beacon_position; the
+    # other two are parked 1000 m away, far too small to see. There is no
+    # env.step() here: the next normal step redraws the change, and calling
+    # step inside a button callback can cause trouble.
     def show_state(self):
         for state, beacon in self.beacons.items():        # go through each beacon
             if state == self.workcell.state:              # is this the current state?
-                x, y, z = self.beacon_position            # yes: use the visible position
+                x, y, z = self.beacon_position            # yes: bring it into view
             else:
-                x, y, z = 0, 0, -10                       # no: hide it below the floor
+                x, y, z = 1000, 1000, -1000               # no: park it far away
             beacon.T = transl(x, y, z)                    # move the sphere there
-        self.workcell.env.step()                          # redraw so the change shows now
 
     # ---- Callbacks: run when the user clicks something -----------------
     def on_estop(self, *args):
@@ -125,6 +143,16 @@ class RobotGUI:
     def on_select_robot(self, index):
         self.selected = self.names[int(index)]            # the dropdown gives an index; look up the name
         print("Selected robot:", self.selected)           # tell the terminal
+
+    def on_select_camera(self, index):
+        self.set_camera(self.camera_names[int(index)])    # the dropdown gives an index; look up the name
+
+    def set_camera(self, name):
+        position, look_at = self.camera_angles[name]      # the two (x, y, z) points for this view
+        # plain Python floats, because numpy integer types break Swift on Windows
+        self.workcell.env.set_camera_pose([float(v) for v in position],
+                                          [float(v) for v in look_at])
+        print("Camera view:", name)                       # tell the terminal
 
     def on_joint_slider(self, j, value):
         if self.workcell.state != "RUNNING":              # ignore the slider unless running
@@ -161,4 +189,4 @@ class RobotGUI:
                     mover.move_to_q(mover.home_q)                     # move to the home pose
                 elif action == "demo" and name in self.demo_targets:  # demo button
                     mover.move_to_pose(self.demo_targets[name])       # move to its demo target
-            self.workcell.env.step(0.05)                  # let Swift update and read the GUI
+            self.workcell.step(0.05)                      # check inputs, let Swift update and read the GUI
