@@ -15,6 +15,10 @@ from spatialmath.base import transl, trotx, troty, trotz, tr2rpy
 from roboticstoolbox import jtraj
 from ir_support import tranimate_custom
 from UR3 import add_UR3, UR3_move_base, UR3_move_and_grab, set_UR3_pose
+from OO_JackRobotTest import StaubliTX60
+from OO_JamesRobotTest import ABBIRB140
+from OO_WillRobotTest import KawasakiRS007N
+from OO_MovementCommands import Workcell
 
 env = swift.Swift()
 env.launch(realtime=True)
@@ -101,5 +105,57 @@ env.add(Lemon_pot_scene)
 #UR3 Base
 ur3, ur3_base_scene = add_UR3(env)
 set_UR3_pose(ur3, ur3_base_scene, SE3(0, 0.1, 0.15))
+
+#Person
+person = part_mesh("personMaleCasual")
+person.T = SE3(2.3, -0.2, 0) * SE3.Rz(pi)
+env.add(person)
+
+#beer prop
+beer = part_mesh("BeerBottle")
+beer.T = SE3(2, -0.3, 0.25)
+env.add(beer)
+
+#6pack beer prop
+beerpack = part_mesh("BottleSixPack")
+beerpack.T = SE3(1.2, 0.75, 0.25)
+env.add(beerpack)
+
+#Staubli (jacks robot) on the robot bar table
+staubli = StaubliTX60(base=transl(0.4, 0.75, 0.25)) #x, y, z. table is y 0.5 to 1.0 and 0.25 high, so this is the middle of it sitting on top
+env.add(staubli.robot)
+staubli.robot.q = staubli.home_q
+link_check = staubli.robot.fkine_all(staubli.home_q) #where every joint is, includes the base
+for i in range(len(staubli.meshes)): #put each stl on its link then add it
+    staubli.meshes[i].T = link_check[i].A @ staubli.offsets[i]
+    env.add(staubli.meshes[i])
 env.step()
+
+# kawasaki robot on third bar table wills robot 
+kawasaki = KawasakiRS007N(base=transl (1.9, 0.2, 0.25)) 
+env.add(kawasaki.robot)
+kawasaki.robot.q = kawasaki.home_q
+kawasaki_link_check = kawasaki.robot.fkine_all(kawasaki.home_q)
+for i in range(len(kawasaki.meshes)):
+    kawasaki.meshes[i].T = kawasaki_link_check[i].A @ kawasaki.offsets[i]
+    env.add(kawasaki.meshes[i])
+env.step()
+
+#IRB James robot on opposing bar table
+irb140 = ABBIRB140(base=transl (-0.4, 0.69, 0.25) @ trotz(-pi/2)) 
+env.add(irb140.robot) 
+irb140.robot.q = irb140.home_q
+irb_link_check = irb140.robot.fkine_all(irb140.home_q)
+for i in range(len(irb140.meshes)):
+    irb140.meshes[i].T = irb_link_check[i].A @ irb140.offsets[i]
+    env.add(irb140.meshes[i])
+env.step()
+
+
+#start movement code sequence -- grab shaker -> move shaker aside -> grab alc -> tip into shaker location -> move to rest
+
+
+
+
+
 input("Press Enter to continue...")

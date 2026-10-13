@@ -25,9 +25,14 @@ from spatialmath.base import trotx, trotz, troty, transl  # rotation/translation
 # Defines the Robot Class - In this case Will's Robot the Kawasaki RS007N
 class KawasakiRS007N:
 
+<<<<<<< HEAD
     # This is the Constructor. This is what specifies the properties of the robot that the other files require
     # This is namely the robot, .meshes, .offsets and .home_q parts.
     def __init__(self):
+=======
+    # ---- Constructor: builds everything about this robot --------------
+    def __init__(self, base=None):
+>>>>>>> b371b574ba8621d5f33273815f60c28b97671f51
 
         # These are the DH Parameters. Joint Lims taken from the Kawasaki Manual
         # The DH Paramaters were inferred using the Alpha from Jack's robot as they're very similar
@@ -43,8 +48,16 @@ class KawasakiRS007N:
         # When an instance of this robot is created the its name may be different but the .robot spec remains the same
         # This is the line that uses the DHRobot from IR support to actually build the robot mathmatically allowing IK and jtrag functions
         self.robot = DHRobot([link1, link2, link3, link4, link5, link6], name='Kawasaki RS007N')
+<<<<<<< HEAD
         
         # This is the CylinderBot Code which is essential for testing - Not currently needed, leave commented 
+=======
+        cyl_viz = CylindricalDHRobotPlot(self.robot, cylinder_radius=0.025, color="#7b1d1d")
+        self.robot = cyl_viz.create_cylinders()
+        if base is not None: #was a base position given?
+            self.robot.base = base #yes, move the whole robot there
+        
+>>>>>>> b371b574ba8621d5f33273815f60c28b97671f51
 
         #cyl_viz = CylindricalDHRobotPlot(self.robot, cylinder_radius=0.025, color="#7b1d1d")
         #self.robot = cyl_viz.create_cylinders()
