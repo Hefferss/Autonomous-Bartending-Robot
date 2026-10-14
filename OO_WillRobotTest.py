@@ -27,7 +27,7 @@ class KawasakiRS007N:
 
     # This is the Constructor. This is what specifies the properties of the robot that the other files require
     # This is namely the robot, .meshes, .offsets and .home_q parts.
-    def __init__(self):
+    def __init__(self, base=None):
 
         # These are the DH Parameters. Joint Lims taken from the Kawasaki Manual
         # The DH Paramaters were inferred using the Alpha from Jack's robot as they're very similar
@@ -48,11 +48,8 @@ class KawasakiRS007N:
         #cyl_viz = CylindricalDHRobotPlot(self.robot, cylinder_radius=0.025, color="#7b1d1d")
         #self.robot = cyl_viz.create_cylinders()
 
-        # -- Block 2b: where this robot stands (edit this line) --
-        # transl(x, y, z) is in metres. To turn the robot as well, multiply by a
-        # rotation, e.g. transl(1, 0, 0) @ trotz(pi) turns it round to face -x.
-        # Setting the base moves the whole robot; the meshes follow automatically.
-        self.robot.base = transl(0.0, 0.0, 0.0)
+        if base is not None:                             # The base parameter in the class allows us to move the position of the robot
+            self.robot.base = base                       # in the main file rather than editing the robot file
 
         # This is the home pose. Really its a starting pose now but its inherited from previous versions where
         # it was required to make robot stand up straight for testing. Now it is a required part of constructor for the starting pose
@@ -65,7 +62,7 @@ class KawasakiRS007N:
 
         mesh_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Kawasaki_Robot_Files")
         file_names = ["wBase.stl", "wLink1.stl", "wLink2.stl", "wLink3.stl", "wLink4.stl", "wLink5.stl", "wLink6.stl"]
-        self.meshes = []                                 # empty list to fill
+        self.meshes = [] # empty list to fill
         for name in file_names:                          # go through each filename
             mesh_path = os.path.join(mesh_folder, name)  # full path to the file
             mesh = Mesh(filename=mesh_path, color="#5B5B5B8D", scale=[0.001, 0.001, 0.001])  # Swift Assumes unit in metres when its actually meant to be mm hence the conversion
