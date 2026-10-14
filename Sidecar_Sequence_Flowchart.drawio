@@ -1,0 +1,127 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Sidecar sequence" id="0">
+    <mxGraphModel dx="3535" dy="1370" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="1800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="n3" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=13;" value="Start run" vertex="1">
+          <mxGeometry height="56" width="320" x="240" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" value="UR3: fetch shaker from storage, put it in Will&#39;s drop zone, safety position" vertex="1">
+          <mxGeometry height="56" width="320" x="240" y="102" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;" value="Will: pick up shaker, set it on his shaker spot, stand up" vertex="1">
+          <mxGeometry height="56" width="320" x="240" y="184" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" value="UR3: fetch next ingredient, put it in Will&#39;s drop zone, safety position" vertex="1">
+          <mxGeometry height="56" width="320" x="240" y="266" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;" value="Will: pick it up, pour into shaker (tip wrist), put it back in drop zone, stand up" vertex="1">
+          <mxGeometry height="56" width="320" x="240" y="348" as="geometry" />
+        </mxCell>
+        <mxCell id="n8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" value="UR3: take ingredient back to its storage spot" vertex="1">
+          <mxGeometry height="56" width="320" x="240" y="430" as="geometry" />
+        </mxCell>
+        <mxCell id="n9" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=13;" value="More ingredients? (cognac, cointreau, lemon)" vertex="1">
+          <mxGeometry height="90" width="320" x="240" y="512" as="geometry" />
+        </mxCell>
+        <mxCell id="n10" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;" value="Will: pick up shaker, leave it on the middle spot for Jack, stand up" vertex="1">
+          <mxGeometry height="56" width="320" x="240" y="628" as="geometry" />
+        </mxCell>
+        <mxCell id="n11" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;" value="Jack: pick up shaker, spinny shake" vertex="1">
+          <mxGeometry height="56" width="320" x="240" y="710" as="geometry" />
+        </mxCell>
+        <mxCell id="n12" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" value="UR3: fetch glass, put it in James&#39; drop zone, safety position" vertex="1">
+          <mxGeometry height="56" width="320" x="240" y="792" as="geometry" />
+        </mxCell>
+        <mxCell id="n13" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" value="James: pick up glass, set it on the glass spot, stand up" vertex="1">
+          <mxGeometry height="56" width="320" x="240" y="874" as="geometry" />
+        </mxCell>
+        <mxCell id="n14" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;" value="Jack: pour shaker into the glass, put shaker in his drop zone, stand up" vertex="1">
+          <mxGeometry height="56" width="320" x="240" y="956" as="geometry" />
+        </mxCell>
+        <mxCell id="n15" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" value="UR3: take shaker back to storage" vertex="1">
+          <mxGeometry height="56" width="320" x="240" y="1038" as="geometry" />
+        </mxCell>
+        <mxCell id="n16" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" value="UR3: fetch umbrella, put it in James&#39; drop zone, safety position" vertex="1">
+          <mxGeometry height="56" width="320" x="240" y="1120" as="geometry" />
+        </mxCell>
+        <mxCell id="n17" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" value="James: pick up umbrella, put it in the glass, stand up" vertex="1">
+          <mxGeometry height="56" width="320" x="240" y="1202" as="geometry" />
+        </mxCell>
+        <mxCell id="n18" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=13;" value="Complete.&amp;nbsp;" vertex="1">
+          <mxGeometry height="56" width="320" x="240" y="1284" as="geometry" />
+        </mxCell>
+        <mxCell id="n19" edge="1" parent="1" source="n3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=12;" target="n4" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n20" edge="1" parent="1" source="n4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=12;" target="n5" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n21" edge="1" parent="1" source="n5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=12;" target="n6" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n22" edge="1" parent="1" source="n6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=12;" target="n7" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n23" edge="1" parent="1" source="n7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=12;" target="n8" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n24" edge="1" parent="1" source="n8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=12;" target="n9" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n25" edge="1" parent="1" source="n9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=12;" target="n10" value="no">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n26" edge="1" parent="1" source="n10" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=12;" target="n11" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n27" edge="1" parent="1" source="n11" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=12;" target="n12" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n28" edge="1" parent="1" source="n12" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=12;" target="n13" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n29" edge="1" parent="1" source="n13" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=12;" target="n14" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n30" edge="1" parent="1" source="n14" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=12;" target="n15" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n31" edge="1" parent="1" source="n15" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=12;" target="n16" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n32" edge="1" parent="1" source="n16" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=12;" target="n17" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n33" edge="1" parent="1" source="n17" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;fontSize=12;" target="n18" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n34" edge="1" parent="1" source="n9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;exitX=1;exitY=0.5;entryX=1;entryY=0.5;fontSize=12;" target="n6" value="yes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n35" parent="1" style="shape=note;whiteSpace=wrap;html=1;size=14;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;" value="E-stop at ANY point (GUI button or Xbox X): the move stops straight away and the whole sequence is cancelled. Reset, then Restart, before anything can move again." vertex="1">
+          <mxGeometry height="110" width="300" x="620" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="n36" parent="1" style="shape=note;whiteSpace=wrap;html=1;size=14;fillColor=#f5f5f5;strokeColor=#666666;fontSize=13;" value="Handoffs: one robot puts the item down and moves away BEFORE the next robot comes in, so two arms are never at the same spot." vertex="1">
+          <mxGeometry height="90" width="300" x="620" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="n37" parent="1" style="text;html=1;fontStyle=1;align=left;fillColor=#f5f5f5;strokeColor=#666666;fontSize=13;" value="Legend" vertex="1">
+          <mxGeometry height="32" width="300" x="620" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="n38" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" value="UR3 (on the rail, fetches from storage)" vertex="1">
+          <mxGeometry height="36" width="300" x="620" y="324" as="geometry" />
+        </mxCell>
+        <mxCell id="n39" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;" value="Will&#39;s robot (Kawasaki RS007N)" vertex="1">
+          <mxGeometry height="36" width="300" x="620" y="368" as="geometry" />
+        </mxCell>
+        <mxCell id="n40" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;" value="Jack&#39;s robot (Staubli TX2-60)" vertex="1">
+          <mxGeometry height="36" width="300" x="620" y="412" as="geometry" />
+        </mxCell>
+        <mxCell id="n41" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" value="James&#39; robot (ABB IRB140)" vertex="1">
+          <mxGeometry height="36" width="300" x="620" y="456" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
