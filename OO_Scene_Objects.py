@@ -29,8 +29,8 @@ class BarScene:
 
         #BarTableRobot.stl
         bar_table_location = os.path.join(item_folder, "BarTableRobot.stl")
-        self.bar_table_scene = Mesh(filename=bar_table_location, color="#8B4513", scale=[0.001, 0.001, 0.001])
-        self.bar_table_scene.T = SE3(-1.5, 0.5, 0)
+        self.bar_table_scene = Mesh(filename=bar_table_location, color="#8B4513", scale=[0.001, 0.0014, 0.001]) # y stretched 1.4x so the front reaches the drop off zones
+        self.bar_table_scene.T = SE3(-1.5, 0.3, 0) # front edge moved from y 0.5 to 0.3, back edge stays at 1.0
         env.add(self.bar_table_scene)
 
         #SensorsTable
