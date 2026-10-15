@@ -1,0 +1,117 @@
+import os
+os.environ["SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS"] = "1"  # read controller even when no pygame window has focus
+import pygame
+import time
+import swift
+import numpy as np
+from roboticstoolbox import models
+from spatialmath import SE3
+import keyboard
+
+# -- Setup Joystick --
+pygame.init()
+pygame.joystick.init()
+
+if pygame.joystick.get_count() == 0:
+    print("No joystick detected.")
+    exit()
+
+joy = pygame.joystick.Joystick(0)
+joy.init()
+
+print(f"Joystick: {joy.get_name()}")
+print(f" - {joy.get_numbuttons()} buttons")
+print(f" - {joy.get_numaxes()} axes")
+
+# -- Setup Robot --
+env = swift.Swift()  # Initialize Swift environment
+env.launch(realtime=True, browser=None)
+
+robot = models.Puma560()
+robot.tool = SE3.Trans(0.1, 0, 0)
+env.add(robot)
+robot.q = robot.qn  # nominal pose - qz is singular for the Puma
+
+# -- Simulation Parameters --
+duration = 300  # total simulation time in seconds
+dt = 0.02  # time step (50 Hz - smaller = smoother)
+smoothing = 0.2  # input filter, 0-1 (lower = smoother but laggier)
+damping = 0.05  # damped least squares factor, stops jumps near singularities (0 = plain pinv)
+Kv = 0.3  # linear velocity gain
+Kw = 0.8  # angular velocity gain
+
+joystick_deadzone_threshold = 0.1  # deadzone threshold for joystick axes
+button_gain = 0.5  # button velocity gain (since buttons are binary)
+
+env.set_camera_pose(SE3.Trans(0, -2, 1).A[0:3, 3], look_at=robot.base.A[0:3, 3])
+env.step(dt)
+
+start_time = time.time()
+n = 0
+dx_filt = np.zeros(6)  # filtered velocity command
+
+# -- Main Control Loop --
+try:
+    while (time.time() - start_time) < duration:
+        pygame.event.pump()
+        n += 1
+
+        # Read and print raw axis values
+        axes_raw = [joy.get_axis(i) for i in range(joy.get_numaxes())]
+        # Apply deadzone threshold
+        # Rescaled deadzone: output ramps from 0 at the threshold instead of jumping straight to 0.1
+        axes = [0 if abs(a) < joystick_deadzone_threshold
+                else np.sign(a) * (abs(a) - joystick_deadzone_threshold) / (1 - joystick_deadzone_threshold)
+                for a in axes_raw]
+        buttons = [joy.get_button(i) for i in range(joy.get_numbuttons())]
+        # Pad missing axes/buttons with zeros so simpler controllers do not crash PS4-style mappings.
+        axes += [0] * (4 - len(axes))
+        buttons += [0] * (4 - len(buttons))
+
+        # -------------------------------------------------------------
+        # 1 - Use joystick input to construct end-effector velocity dx
+        # Left stick  -> translate X / Y
+        # Buttons 0/1 -> translate Z up / down
+        # Right stick -> rotate about X / Y
+        # Buttons 2/3 -> rotate about Z
+        vx = Kv * axes[0]
+        vy = -Kv * axes[1]  # stick up reads negative, flip so up = +Y
+        vz = button_gain * (buttons[0] - buttons[1])
+
+        wx = Kw * axes[2]
+        wy = -Kw * axes[3]
+        wz = button_gain * (buttons[2] - buttons[3])
+
+        dx = np.array([vx, vy, vz, wx, wy, wz])
+
+        # Low-pass filter the command so stick movements ramp in/out
+        dx_filt = smoothing * dx + (1 - smoothing) * dx_filt
+
+        # 2 - Use robot.jacob0(q) to compute dq
+        # Damped pseudo-inverse: J^T (J J^T + lambda^2 I)^-1 - same as pinv(J) away from singularities
+        J = robot.jacob0(robot.q)
+        if damping > 0:
+            J_inv = J.T @ np.linalg.inv(J @ J.T + damping**2 * np.eye(6))
+        else:
+            J_inv = np.linalg.pinv(J)  # plain inverse - set damping = 0 for Q2.7 to see the singularity
+        dq = J_inv @ dx_filt
+
+        # 3 - Apply dq to robot.q using timestep dt
+        robot.q = robot.q + dq * dt
+
+        if n % 50 == 0:  # print about once a second
+            print(f"axes = {np.round(axes_raw, 2)}  buttons = {buttons}  dx = {np.round(dx_filt, 2)}")
+        # -------------------------------------------------------------
+
+        # Animate robot
+        env.step(dt)
+
+        if keyboard.is_pressed('r'):
+            robot.q = robot.qn
+            dx_filt = np.zeros(6)
+            print("Resetting robot to nominal configuration.")
+
+except KeyboardInterrupt:
+    print("Exiting...")
+finally:
+    pygame.quit()
