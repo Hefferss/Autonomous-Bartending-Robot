@@ -103,6 +103,19 @@ class RobotMover:
         self.meshes = robot_setup.meshes      # Requires STL mesh list to update
         self.offsets = robot_setup.offsets    # The list of Mesh offsets for updating
         self.home_q = robot_setup.home_q      # The Starting Pose for the 'return to home' button
+        self.held = [] # ATTACHMENT: items this robot is carrying, as (mesh, offset from the EE) pairs
+
+    # Grab (ATTACHMENT)
+    # Attaches an item to the end effector, same idea as the lab 4 pen: item pose = fkine().A @ offset
+    def grab(self, item):
+        T_ee = self.robot.fkine(self.robot.q).A # where the end effector is now
+        self.held.append((item, np.linalg.inv(T_ee) @ np.array(item.T))) # item pose relative to the EE
+        print("Grabbed item")
+
+    # Release (ATTACHMENT)
+    def release(self):
+        self.held = []
+        print("Released item")
 
     # Update Mesh Function
     # This is required for the Meshes to match the DH Parameters & Cylinder bot
@@ -114,6 +127,11 @@ class RobotMover:
         for i in range(len(self.meshes)):     # go through each mesh one by one
             # link i position  @  alignment offset  ->  mesh position
             self.meshes[i].T = link_check[i].A @ self.offsets[i] # the mesh postion gets updated by mulyiplyin mathmatical location to the offset
+        # ATTACHMENT: held items follow the end effector. every move (jtraj, rmrc, sliders, ur3 rail) calls this so they all carry items
+        if self.held:
+            T_ee = self.robot.fkine(q).A # end effector at this step
+            for item, offset in self.held:
+                item.T = T_ee @ offset # same as the lab 4 pen
 
     # Adds the Robot to the Scene
     # The Original add robot function just to dictionary that is used 

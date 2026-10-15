@@ -47,5 +47,5 @@ class UR3Robot:
         result = self.robot.ikine_LM(target_pose, q0=self.robot.q, mask=[1,1,1,0,0,0]) #usual
         mover.move_to_q(result.q, steps) #same jtraj move as before but the OO mover does it so the estop works. mover taken from wills code
 
-        item.T = self.robot.fkine(self.robot.q).A  # attach item to end-effector
+        mover.grab(item)  # attach item to end-effector. the mover keeps it there on every move now
         mover.workcell.env.step()
