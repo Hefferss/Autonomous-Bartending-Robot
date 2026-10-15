@@ -9,7 +9,7 @@
 # Imports
 from math import pi                                  
 from spatialmath import SE3                          
-from OO_MovementCommands import Workcell              # WorkCell is the Scene setup.
+from OO_MovementCommands import Workcell, RobotMover              # WorkCell is the Scene setup.
 # It is a class defined in the MovementCommands file and is responsible for setting up swift, Emergency stop behaviour, Inputs that GUI & Xbox buttons control and adding the robots.
 from OO_GUI import RobotGUI                           # RobotGUI sets up the Swift GUI
 # The GUI is held in its own file and the RobotGUI class builds the buttons and the sliders for swift. 
@@ -24,7 +24,16 @@ if __name__ == "__main__":                           # This line ensures that th
     workcell.add_robot("Kawasaki RS007N", KawasakiRS007N())  # creates instance of the kawasaki robot using the movementcommands add_robot function. adds the kawasaki to the scene with the name in the quotations
     workcell.launch()                                # Launch Swift with all the added robots
 
-    T_target = SE3(-0.2, 0.1, 0.5) * SE3.Rx(pi)      # Test Pose for the robots within reach if they are placed at origin. Don't try pressing demo if robot not at origin currently it will break
+
+
+    Movements = workcell.movers["Kawasaki RS007N"]                      # THE MOVER FOR THE ROBOT IN THE SCENE
+    Movements.move_to_q([0, pi/4, -3*pi/4, 0, pi/2, 0])                 # BENT READY POSE: ELBOW BENT, WRIST BENT (NOT SINGULAR). RMRC STARTS FROM HERE
+    T_now = Movements.robot.fkine(Movements.robot.q)                    # WHERE THE HAND IS NOW
+    T_target = SE3(0.05, 0, -0.1) * T_now                               # 5 CM FORWARD AND 10 CM DOWN FROM THERE, SO IT CAN'T BE OUT OF REACH
+    reached = Movements.move_rmrc(T_target)                             # STRAIGHT LINE MOVE USING THE EXISTING RMRC CODE
+    print("RMRC reached target:", reached)
+
+    
     gui = RobotGUI(workcell, demo_targets={"Kawasaki RS007N": T_target})  # Takes the Swift env(workcell), & demo_target to create instance of the RobotGUI class
     # demo target takes the robot name that was specified when it was added and its target pose for testing. This is not a permanent setup but is required to make the demo button work in swift
     # To have multiple robots in the scene working with the GUI it would be required to have multiple in the dictionary

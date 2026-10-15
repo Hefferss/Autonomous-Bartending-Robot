@@ -12,14 +12,13 @@
 # NEW IN THIS VERSION (ALL COMMENTS IN CAPITALS ARE NEW):
 # SOLVE_IK - ONE PLACE WHERE INVERSE KINEMATICS IS SOLVED, SO EVERY MOVE GIVES THE SAME ANSWER EVERY TIME
 # MOVE_RMRC - STRAIGHT LINE MOVEMENT USING RESOLVED MOTION RATE CONTROL. FOLLOWS THE LAB 9 SOLUTION (QUESTION 1) STEP BY STEP
-# PLOT_LAST_RMRC - DRAWS THE SAME RESULT PLOTS AS THE LAB (JOINT ANGLES, JOINT VELOCITIES, ERRORS, MANIPULABILITY)
 # MOVE_TO_POSE AND JOG NOW CALL SOLVE_IK INSTEAD OF CALLING IKINE_LM THEMSELVES
+# ALL GRAPHING CODE HAS BEEN REMOVED (NO PLOTS ARE REQUIRED, ONLY THE MOVEMENT)
 
 import swift                      
-import numpy as np                # NEW: NUMPY, USED FOR THE RMRC MATHS (ARRAYS, SINGULAR VALUES, CLIPPING)
+import numpy as np                # NEW: NUMPY, USED FOR THE RMRC MATHS (ARRAYS, CLIPPING)
 from roboticstoolbox import jtraj, trapezoidal # Minimum jerk profile | NEW: TRAPEZOIDAL GIVES A SMOOTH 0 TO 1 SPEED PROFILE FOR RMRC
 from spatialmath import SE3       
-from spatialmath.base import tr2rpy     # NEW: TURNS A ROTATION MATRIX INTO ROLL-PITCH-YAW ANGLES (USED FOR THE RMRC ANGLE ERROR, AS IN THE LAB)
 
 
 # The workcell class sets up swift and adds the robot, input and safety states to the 3D environment
@@ -199,6 +198,7 @@ class RobotMover:
     #     VALUE GETS SMALLER FOR SMALLER ROBOTS, SO THE SAME 0.1 WOULD DAMP A UR3 ALL THE TIME.
     #   - THE LAB'S ORIENTATION STAYS FIXED. HERE THE ORIENTATION TURNS SMOOTHLY FROM THE START POSE TO THE TARGET POSE.
     #   - IT CHECKS THE HAND ARRIVED AND RETURNS TRUE OR FALSE (THE LAB JUST PLOTS).
+    #   - NO PLOTTING: THE LAB'S RESULT ARRAYS ARE NOT SAVED ANY MORE, ONLY THE ARRAYS THE MOVEMENT NEEDS ARE KEPT.
     # ARGUMENTS:
     #   DURATION: SECONDS THE MOVE TAKES IN THE MATHS (THE LAB'S t)
     #   STEPS: HOW MANY STEPS THE MOVE IS SPLIT INTO
@@ -209,7 +209,6 @@ class RobotMover:
     #   MAX_DAMPING: THE 0.05 IN THE LAB'S DAMPING FORMULA. LOWER = MORE ACCURATE TRACKING, BUT LESS PROTECTION NEAR A SINGULARITY
     # RETURNS TRUE IF IT REACHED THE TARGET. RETURNS FALSE IF THE E-STOP STOPPED IT, OR IF IT FINISHED TOO FAR AWAY
     # (TARGET OUT OF REACH, OR BLOCKED BY A SINGULARITY OR JOINT LIMIT).
-    # THE LAB'S RESULT ARRAYS ARE SAVED IN self.last_rmrc SO THEY CAN BE PLOTTED WITH plot_last_rmrc().
     def move_rmrc(self, T_target, duration=3.0, steps=60, tolerance=0.005,
                   epsilon=None, orientation_weight=0.1, max_joint_step=None, max_damping=0.05):
         robot = self.robot                                # SHORT NAME FOR THE ROBOT
@@ -227,11 +226,8 @@ class RobotMover:
         W = np.diag([1, 1, 1, orientation_weight, orientation_weight, orientation_weight])   # WEIGHTING MATRIX FOR THE VELOCITY VECTOR
 
         # 1.2) ALLOCATE ARRAY DATA
-        m = np.zeros([steps, 1])                          # MEASURE OF MANIPULABILITY
         q_matrix = np.zeros([steps, n])                   # JOINT ANGLES
         qdot = np.zeros([steps, n])                       # JOINT VELOCITIES
-        position_error = np.zeros([3, steps])             # TRAJECTORY ERROR, FOR PLOTTING
-        angle_error = np.zeros([3, steps])                # TRAJECTORY ERROR, FOR PLOTTING
 
         # 1.3) SET UP TRAJECTORY, INITIAL POSE
         T_start = robot.fkine(robot.q)                    # WHERE THE HAND IS NOW (WORLD FRAME)
@@ -245,11 +241,9 @@ class RobotMover:
         qlim = np.transpose(robot.qlim)                   # JOINT LIMITS, ONE ROW PER JOINT
 
         # 1.4) TRACK THE TRAJECTORY WITH RMRC
-        done = 0                                          # HOW MANY STEPS HAVE BEEN COMPLETED
         for i in range(steps - 1):
             if self.workcell.state != "RUNNING":          # SAME E-STOP CHECK AS MOVE_TO_Q
                 print("RMRC motion aborted")              # PRINT
-                self.last_rmrc = self._rmrc_results(m, q_matrix, qdot, position_error, angle_error, epsilon, done)
                 return False                              # STOP IMMEDIATELY, DROP THE REST OF THE LINE
             # (A COLLISION CHECK WOULD GO HERE, BEFORE THE ROBOT MOVES)
 
@@ -261,13 +255,12 @@ class RobotMover:
             S = Rdot @ Ra.T                               # SKEW-SYMMETRIC MATRIX
             linear_velocity = (1 / delta_t) * delta_x
             angular_velocity = np.array([S[2, 1], S[0, 2], S[1, 0]])   # PICK THE ANGULAR VELOCITY OUT OF THE SKEW MATRIX
-            delta_theta = tr2rpy(Rd @ Ra.T, order='xyz')  # ROTATION ERROR AS ROLL-PITCH-YAW ANGLES
             xdot = W @ np.vstack((linear_velocity.reshape(3, 1),
                                   angular_velocity.reshape(3, 1)))   # END-EFFECTOR VELOCITY TO REACH THE NEXT WAYPOINT
             J = robot.jacob0(q_matrix[i, :])              # JACOBIAN AT THE CURRENT JOINT STATE
-            m[i] = np.sqrt(np.linalg.det(J @ J.T))        # MANIPULABILITY: CLOSE TO 0 MEANS NEAR A SINGULARITY
-            if m[i] < epsilon:                            # IF MANIPULABILITY IS LESS THAN THE THRESHOLD
-                m_lambda = (1 - m[i] / epsilon) * max_damping   # DAMPING GROWS AS WE GET CLOSER TO THE SINGULARITY (LAB: 0.05)
+            m = np.sqrt(np.linalg.det(J @ J.T))           # MANIPULABILITY: CLOSE TO 0 MEANS NEAR A SINGULARITY
+            if m < epsilon:                               # IF MANIPULABILITY IS LESS THAN THE THRESHOLD
+                m_lambda = (1 - m / epsilon) * max_damping   # DAMPING GROWS AS WE GET CLOSER TO THE SINGULARITY (LAB: 0.05)
             else:
                 m_lambda = 0
             inv_j = np.linalg.inv(J.T @ J + m_lambda * np.eye(n)) @ J.T    # DAMPED LEAST SQUARES INVERSE
@@ -282,15 +275,10 @@ class RobotMover:
                 elif q_matrix[i, j] + delta_t * qdot[i, j] > qlim[j, 1]:   # NEXT ANGLE ABOVE THE LIMIT...
                     qdot[i, j] = 0                        # STOP THE MOTOR
             q_matrix[i + 1, :] = q_matrix[i, :] + delta_t * qdot[i, :]     # NEXT JOINT STATE FROM THE JOINT VELOCITIES
-            position_error[:, i] = x[:, i + 1] - T[:3, 3] # FOR PLOTTING
-            angle_error[:, i] = delta_theta               # FOR PLOTTING
 
             robot.q = q_matrix[i + 1, :]                  # THE LAB PLAYS THESE AT THE END. HERE EACH STEP IS PLAYED AS IT IS CALCULATED
             self.update_meshes(robot.q)                   # MOVE THE MESHES TO MATCH
             self.workcell.step()                          # CHECK INPUTS, UPDATE SWIFT
-            done = i + 1
-
-        self.last_rmrc = self._rmrc_results(m, q_matrix, qdot, position_error, angle_error, epsilon, done)
 
         # DID THE HAND ACTUALLY ARRIVE? (NOT IN THE LAB)
         error = np.linalg.norm(robot.fkine(q_matrix[-1, :]).t - T_target.t)   # DISTANCE LEFT TO THE TARGET (METRES)
@@ -298,55 +286,6 @@ class RobotMover:
             print("RMRC finished %.1f mm from the target (out of reach, near a singularity or at a joint limit)" % (error * 1000))
             return False
         return True                                       # REACHED THE TARGET
-
-    # SAVES THE LAB'S RESULT ARRAYS (CUT TO THE STEPS THAT WERE ACTUALLY DONE) FOR PLOTTING
-    def _rmrc_results(self, m, q_matrix, qdot, position_error, angle_error, epsilon, done):
-        k = max(done, 1)                                  # AT LEAST ONE ROW
-        return {"m": m[:k], "q": q_matrix[:k + 1], "qdot": qdot[:k], "epsilon": epsilon,
-                "position_error": position_error[:, :k], "angle_error": angle_error[:, :k]}
-
-    # PLOT LAST RMRC (NEW)
-    # DRAWS THE SAME PLOTS AS THE LAB FOR THE MOST RECENT move_rmrc CALL: JOINT ANGLES (WITH THEIR LIMITS),
-    # JOINT VELOCITIES, POSITION AND ANGLE ERROR, AND MANIPULABILITY (WITH EPSILON). GOOD EVIDENCE FOR THE DEMO AND VIDEO.
-    def plot_last_rmrc(self):
-        import matplotlib.pyplot as plt                   # ONLY NEEDED HERE, SO IMPORTED HERE
-        if not hasattr(self, "last_rmrc"):                # NOTHING TO PLOT YET?
-            print("No RMRC move has been run yet")
-            return
-        r = self.last_rmrc                                # THE SAVED ARRAYS
-        qlim = np.transpose(self.robot.qlim)              # JOINT LIMITS
-        n = self.robot.n
-        rows = int(np.ceil(n / 2))
-
-        plt.figure("RMRC joint angles")
-        for j in range(n):
-            plt.subplot(rows, 2, j + 1)
-            plt.plot(r["q"][:, j], 'k', linewidth=1)
-            plt.title("Joint %d" % (j + 1)); plt.ylabel("Angle (rad)")
-            plt.axhline(qlim[j, 0], color='r'); plt.axhline(qlim[j, 1], color='r')
-        plt.tight_layout()
-
-        plt.figure("RMRC joint velocities")
-        for j in range(n):
-            plt.subplot(rows, 2, j + 1)
-            plt.plot(r["qdot"][:, j], 'k', linewidth=1)
-            plt.title("Joint %d" % (j + 1)); plt.ylabel("Velocity (rad/s)")
-            plt.axhline(0, color='r')
-        plt.tight_layout()
-
-        plt.figure("RMRC tracking error")
-        plt.subplot(2, 1, 1)
-        plt.plot(r["position_error"].T * 1000, linewidth=1); plt.axhline(0, color='k')
-        plt.xlabel("Step"); plt.ylabel("Position error (mm)"); plt.legend(["X-Axis", "Y-Axis", "Z-Axis"])
-        plt.subplot(2, 1, 2)
-        plt.plot(r["angle_error"].T, linewidth=1); plt.axhline(0, color='k')
-        plt.xlabel("Step"); plt.ylabel("Angle error (rad)"); plt.legend(["Roll", "Pitch", "Yaw"])
-
-        plt.figure("RMRC manipulability")
-        plt.plot(r["m"], 'k', linewidth=1); plt.axhline(r["epsilon"])
-        plt.title("Manipulability (line = epsilon)")
-        plt.show(block=False)                             # SHOW THE PLOTS WITHOUT FREEZING THE PROGRAM
-        plt.pause(0.1)
 
     # Jog for testing
     # NOW USES SOLVE_IK, SO A JOG GIVES THE SAME RESULT AS EVERY OTHER MOVE
