@@ -1,20 +1,8 @@
-# ======================================================================
-# OO_GUI.py  --  Swift GUI for the whole Workcell
-#
-# Controls added to the Swift window:
-#     - OPERATIONS: "Go Home" and "Run Demo Move" for the selected robot (top of the panel)
-#     - EMERGENCY STOP, RESET E-STOP and RESTART buttons (affect ALL robots)
-#     - a coloured beacon: GREEN = RUNNING, RED = ESTOPPED, AMBER = RESET
-#     - a DROPDOWN to choose which robot the controls below act on
-#     - a DROPDOWN of camera views (edit OO_CameraAngles.py to add or change views)
-#     - joint sliders (degrees) for the selected robot
-#     - jog buttons (X, Y, Z) for the selected robot
-#
-# IMPORTANT: Swift only reacts to the GUI while env.step() is being
-# called, so the program must finish by calling gui.run() (a loop).
-# ======================================================================
+# The GUI file handles the GUI, including sliders buttons and drop down menus.
+# It is also responsible for the Safety Beacon (Coloured Sphere)
+# Swift only takes GUI inputs if env.step() is called
+# The program must finish by calling gui.run() to do so
 
-# ---------------------------- IMPORTS ---------------------------------
 import swift                                  # gives us Button, Slider, Select and Label
 import numpy as np                            # for degree/radian conversion and arrays
 from spatialgeometry import Sphere            # the coloured state beacons
