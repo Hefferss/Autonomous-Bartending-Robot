@@ -88,8 +88,14 @@ class BarScene:
         self.Lemon_pot_scene.T = SE3(0.2, -0.2, 0.26)
         env.add(self.Lemon_pot_scene)
 
+        #cocktail shaker lid, STL is modelled sitting on the shaker so drop it 0.21 to sit on the table
+        cocktail_shaker_lid_location = os.path.join(item_folder, "CocktailShakerLid.stl")
+        self.cocktail_shaker_lid_scene = Mesh(filename=cocktail_shaker_lid_location, color="#504E4E", scale=[0.001, 0.001, 0.001])
+        self.cocktail_shaker_lid_scene.T = SE3(0.7, -0.25, 0.045)
+        env.add(self.cocktail_shaker_lid_scene)
+
         #safety tape (1m long pieces) - taped box from x -2 to 3, y -1 to 2
-        safety_tape_location = os.path.join(item_folder, "safetyTape.stl")
+        safety_tape_location = os.path.join(item_folder, "SafetyTape.stl")
         tape_poses = [SE3(-2, -1, 0), SE3(-1, -1, 0), SE3(0, -1, 0), SE3(1, -1, 0), SE3(2, -1, 0),
                       SE3(-2, 1.9, 0), SE3(-1, 1.9, 0), SE3(0, 1.9, 0), SE3(1, 1.9, 0), SE3(2, 1.9, 0),
                       SE3(-2, 0, 0) * trotz(-pi/2), SE3(-2, 1, 0) * trotz(-pi/2), SE3(-2, 2, 0) * trotz(-pi/2),

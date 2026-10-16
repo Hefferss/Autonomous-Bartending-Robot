@@ -25,16 +25,19 @@ LID_DROP = (-0.3, 0.45, 0.267) # UR3 leaves the lid here for Jack
 LID_ON_SHAKER = 0.477 # top of the lid once it's on the shaker
 
 
-def shaker_to_will(workcell, scene, ur3_setup):
+# the whole cocktail in one go: UR3 -> Will -> Jack, UR3 brings Jack the lid, Jack puts it on and shakes
+def make_cocktail(workcell, scene, ur3_setup):
     ur3 = workcell.movers["UR3"] # robots from the workcell
     will = workcell.movers["Will's Robot"]
     jam = workcell.movers["James' Robot"]
     jack = workcell.movers["Jack's Robot"]
     shaker = scene.cocktail_shaker_scene
+    lid = scene.cocktail_shaker_lid_scene
 
-    ur3.release() # RESET SO THE BUTTON CAN BE PRESSED AGAIN
-    will.release()
+    for robot in (ur3, will, jack): # RESET SO THE BUTTON CAN BE PRESSED AGAIN
+        robot.release()
     shaker.T = SHAKER_START
+    lid.T = LID_START
 
     ur3_setup.move_base(ur3, SHAKER_STORAGE[0]) # slide to the shaker
     ur3.pick_drop(SHAKER_STORAGE, shaker) # grab it
@@ -49,31 +52,18 @@ def shaker_to_will(workcell, scene, ur3_setup):
     jack.move_to_q((0.5, pi/2, -pi/2, 1, 3, 9)) # Jack stands back up
     will.move_to_q((0.8, pi/2, -pi/2, 0.5, 7, 3)) # Will stands back up
 
-# shaker goes Will -> Jack, UR3 brings Jack the lid, Jack holds the lid onto the shaker, grabs both and shakes
-def shaker_and_lid_to_jack(workcell, scene, ur3_setup):
-    ur3 = workcell.movers["UR3"]
-    will = workcell.movers["Will's Robot"]
-    jack = workcell.movers["Jack's Robot"]
-    shaker = scene.cocktail_shaker_scene
-    lid = scene.cocktail_shaker_lid_scene
-
-    for robot in (ur3, will, jack):
-        robot.release()
-    shaker.T = SE3(*WILL_SHAKER_SPOT, 0.255)
-    lid.T = LID_START
-
-    will.pick_drop((*WILL_SHAKER_SPOT, SHAKER_TOP), shaker)
+    will.pick_drop((*WILL_SHAKER_SPOT, SHAKER_TOP), shaker) # Will passes the shaker to Jack
     will.pick_drop((*JACK_DROP_ZONE, SHAKER_TOP))
     will.move_to_q(will.home_q)
 
-    ur3_setup.move_base(ur3, LID_STORAGE[0])
+    ur3_setup.move_base(ur3, LID_STORAGE[0]) # UR3 fetches the lid for Jack
     ur3.pick_drop(LID_STORAGE, lid)
     ur3.tuck()
     ur3_setup.move_base(ur3, LID_DROP[0])
     ur3.pick_drop(LID_DROP)
     ur3.tuck()
 
-    jack.pick_drop(LID_DROP, lid)
+    jack.pick_drop(LID_DROP, lid) # Jack puts the lid on, grabs both and shakes
     jack.move_to_pose(SE3(*JACK_DROP_ZONE, LID_ON_SHAKER) * SE3.Rx(pi))
     jack.grab(shaker)
     jack.move_to_pose(SE3(*JACK_DROP_ZONE, 0.8) * SE3.Rx(pi))
@@ -101,8 +91,7 @@ if __name__ == "__main__":
     # 2. RESET ANY ITEMS IT MOVES AT THE START SO IT CAN BE REPLAYED
     # 3. ADD A LINE BELOW, E.G.  "Pour Drink": lambda: pour_drink(workcell, scene),  (LAMBDA STOPS IT RUNNING NOW)
     scenes = {
-        "Run Demo (Shaker to Will)": lambda: shaker_to_will(workcell, scene, ur3),
-        "Shaker + Lid to Jack": lambda: shaker_and_lid_to_jack(workcell, scene, ur3),
+        "Make Cocktail": lambda: make_cocktail(workcell, scene, ur3),
     }
     gui = RobotGUI(workcell, scenes=scenes) # button label -> scene
     gui.build() # add the buttons, dropdown and sliders
