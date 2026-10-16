@@ -7,6 +7,4 @@ Guide to git push:
 6. git pull (merges with other versions of the files in case other people did work and it was pushed whilst you were working on your own part)
 7. git push (pushes your files onto the repository)
 
-
-
 you have to do cd .\Autonomous-Bartending-Robot

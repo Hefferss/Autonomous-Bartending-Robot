@@ -85,9 +85,9 @@ def move_ur_joint_positions(client, joint_positions, duration=5.0):
 if __name__ == '__main__':
     
     
-    vertical = [0.0, -np.pi/2, 0.0, -np.pi/2, 0.0, 0.0] #first point, vertical (same as the original)
-    point_a = [np.pi/2, -np.pi/1.25, np.pi/1.5, -np.pi/1.25, 0.0, 0.0]  # point A, should be shifted enough away that its fine
-    point_b = [-np.pi/2, -np.pi/1.25, np.pi/1.5, -np.pi/1.25, 0.0, 0.0]  # point B, should also be shifted enough away that its fine
+    vertical = [0.0, -np.pi/2, 0.0, np.pi/2, 0.0, 0.0] #first point, vertical (same as the original)
+    point_a = [np.pi/2, np.pi/1.25 - 2*np.pi, np.pi/1.5, -np.pi/1.25, 0.0, 0.0]  # point A, should be shifted enough away that its fine
+    point_b = [-np.pi/2, np.pi/1.25 - 2*np.pi, np.pi/1.5, -np.pi/1.25, 0.0, 0.0]  # point B, should also be shifted enough away that its fine
     
     #loading for swift. take out for actual test. or comment out. id rather its commented out.
     env = swift.Swift()
@@ -119,4 +119,4 @@ if __name__ == '__main__':
             #move_ur_joint_positions(client, point, duration) #uncomment for actual
             time.sleep(5.0)  # 5 second delays
     except KeyboardInterrupt:
-        print("\n[APP] Interrupted by user.")   
+        print("\n[APP] Interrupted by user.")

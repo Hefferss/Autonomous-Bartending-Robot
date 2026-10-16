@@ -183,6 +183,24 @@ class RobotMover:
         print("IK Solution found (radians):", q_goal)  #print to terminal for debugging
         return self.move_to_q(q_goal, steps)    # use function above to move to joints found
 
+    # PICK DROP: ABOVE, DOWN, GRAB (IF GIVEN AN ITEM) OR LET GO, BACK UP. STOPS ON E-STOP
+    def pick_drop(self, xyz, item=None, lift=0.1, steps=50):
+        T_spot = SE3(*xyz) * SE3.Rx(np.pi)        # the spot, tool pointing down
+        T_above = SE3(0, 0, lift) * T_spot        # same pose, lifted in the world frame
+        if not self.move_to_pose(T_above, steps): # above
+            return False
+        if not self.move_to_pose(T_spot, steps // 2): # down
+            return False
+        if item is not None:
+            self.grab(item)
+        else:
+            self.release()
+        return self.move_to_pose(T_above, steps // 2) # back up
+
+    # TUCK: PULLS THE EE BACK OVER ITS OWN BASE, OUT OF THE WAY (X FOLLOWS THE BASE ON THE RAIL)
+    def tuck(self, y=0.0, height=0.7, steps=50):
+        return self.move_to_pose(SE3(self.robot.base.t[0], y, height) * SE3.Rx(np.pi), steps)
+
     # MOVE RMRC (NEW)
     # RESOLVED MOTION RATE CONTROL, FOLLOWING THE LAB 9 SOLUTION (QUESTION 1). THE STEP NUMBERS BELOW MATCH THE LAB.
     # MOVES THE HAND IN A STRAIGHT LINE FROM WHERE IT IS NOW TO T_TARGET.

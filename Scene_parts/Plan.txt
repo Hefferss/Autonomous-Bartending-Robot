@@ -1,6 +1,5 @@
 James Robot in
 Collision Detection for each Robot
-Make File Obejct Orientated Class - Robots working in each file
 Make UR3 Animation
 Message on Teams about Booking UR3 After doing Risk Assessment
 Storyboard/Flowchart

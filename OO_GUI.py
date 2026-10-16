@@ -16,10 +16,12 @@ class RobotGUI:
     # ---- Constructor ----------------------------------------------------
     # Overview: stores the workcell, a dictionary of demo poses (one per
     # robot name), the jog size, and which robot is selected to start with.
+    # SCENES (NEW): BUTTON LABEL -> FUNCTION, ONE BUTTON EACH (SEE OO_MainV2.py)
     def __init__(self, workcell, demo_targets=None, jog_step=0.02,
-                 beacon_position=(0, 0, 1.5), camera_angles=None):
+                 beacon_position=(0, 0, 1.5), camera_angles=None, scenes=None):
         self.workcell = workcell                          # the shared scene
         self.demo_targets = demo_targets or {}            # robot name -> demo pose (may be empty)
+        self.scenes = scenes or {}                        # BUTTON LABEL -> FUNCTION TO RUN (MAY BE EMPTY)
         self.jog_step = jog_step                          # how far one jog click moves (metres)
         self.beacon_position = beacon_position            # where the active beacon is shown
         self.names = list(workcell.movers.keys())         # robot names in dropdown order
@@ -53,7 +55,11 @@ class RobotGUI:
         # -- Block 2: operations (preset movements for the selected robot) --
         env.add(swift.Label("--- OPERATIONS ---"))
         env.add(swift.Button(lambda *args: self.queue("home"), "Go Home"))
-        env.add(swift.Button(lambda *args: self.queue("demo"), "Run Demo Move"))
+        if self.demo_targets:                             # OLD SINGLE-POSE DEMO, ONLY IF DEMO POSES WERE GIVEN
+            env.add(swift.Button(lambda *args: self.queue("demo"), "Run Demo Move"))
+        # SCENE BUTTONS: QUEUED HERE, PLAYED IN RUN() ("label=label" LOCKS IN THE LABEL LIKE THE JOG BUTTONS)
+        for label in self.scenes:
+            env.add(swift.Button(lambda *args, label=label: self.queue("scene", label), label))
 
         # -- Block 3: safety buttons (these affect ALL robots) --
         env.add(swift.Label("--- SAFETY (all robots) ---"))
@@ -177,4 +183,6 @@ class RobotGUI:
                     mover.move_to_q(mover.home_q)                     # move to the home pose
                 elif action == "demo" and name in self.demo_targets:  # demo button
                     mover.move_to_pose(self.demo_targets[name])       # move to its demo target
+                elif action == "scene":                               # SCENE BUTTON
+                    self.scenes[data]()                               # PLAY THE SCENE (E-STOP STILL WORKS)
             self.workcell.step(0.05)                      # check inputs, let Swift update and read the GUI
