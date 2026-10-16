@@ -25,41 +25,17 @@ class StaubliTX60:
         #mesh attached to robot inspired by the pen mesh import in week 4
         mesh_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Staubli Robot Files")
 
-        #Base link
-        base_location = os.path.join(mesh_folder, "base_link.stl")
-        base_mesh = Mesh(filename=base_location, color="#6e6e6e")
-        base_offset = np.eye(4) #no transform needed
-
-        #link 1
-        link_1_location = os.path.join(mesh_folder, "link_1.stl")
-        link_1_mesh = Mesh(filename=link_1_location, color="#6e6e6e")
-        link_1_offset = trotx(-pi/2)
-
-        #link 2
-        link_2_location = os.path.join(mesh_folder, "link_2.stl")
-        link_2_mesh = Mesh(filename=link_2_location, color="#6e6e6e")
-        link_2_offset = transl(-0.29, 0, 0) @ trotz(-pi/2) @ trotx(-pi/2) #dh frame is at elbow, stl origin at shoulder
-
-        #link 3
-        link_3_location = os.path.join(mesh_folder, "link_3.stl")
-        link_3_mesh = Mesh(filename=link_3_location, color="#6e6e6e")
-        link_3_offset = np.eye(4)
-
-        #link 4
-        link_4_location = os.path.join(mesh_folder, "link_4.stl")
-        link_4_mesh = Mesh(filename=link_4_location, color="#6e6e6e")
-        link_4_offset = transl(0, -0.31, 0) @ trotx(-pi/2) #according to the schematics, its at the wrist point so it needs to be translatsed and offset. 4th adjustment. 0-.25, -0.3, -0.325. -0.32.
-
-        #link 5
-        link_5_location = os.path.join(mesh_folder, "link_5.stl")
-        link_5_mesh = Mesh(filename=link_5_location, color="#6e6e6e")
-        link_5_offset = np.eye(4)
-
-        #link 6
-        link_6_location = os.path.join(mesh_folder, "link_6.stl")
-        link_6_mesh = Mesh(filename=link_6_location, color="#6e6e6e")
-        link_6_offset = np.eye(4) #no transform needed, lines up already
+        #offsets for each stl, same order as the files below
+        mesh_files = ["base_link.stl", "link_1.stl", "link_2.stl", "link_3.stl", "link_4.stl", "link_5.stl", "link_6.stl"]
+        self.offsets = [np.eye(4), #base link, no transform needed
+                        trotx(-pi/2), #link 1
+                        transl(-0.29, 0, 0) @ trotz(-pi/2) @ trotx(-pi/2), #link 2. dh frame is at elbow, stl origin at shoulder
+                        np.eye(4), #link 3
+                        transl(0, -0.31, 0) @ trotx(-pi/2), #link 4. according to the schematics, its at the wrist point so it needs to be translatsed and offset. 4th adjustment. 0-.25, -0.3, -0.325. -0.32.
+                        np.eye(4), #link 5
+                        np.eye(4)] #link 6. no transform needed, lines up already
 
         #the OO mover does link_check[i].A @ offsets[i] for each mesh every step, so these two lists have to be in the same order
-        self.meshes = [base_mesh, link_1_mesh, link_2_mesh, link_3_mesh, link_4_mesh, link_5_mesh, link_6_mesh]
-        self.offsets = [base_offset, link_1_offset, link_2_offset, link_3_offset, link_4_offset, link_5_offset, link_6_offset]
+        self.meshes = []
+        for file in mesh_files:
+            self.meshes.append(Mesh(filename=os.path.join(mesh_folder, file), color="#6e6e6e"))

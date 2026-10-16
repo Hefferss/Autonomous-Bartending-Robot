@@ -38,14 +38,5 @@ class UR3Robot:
                 return False
             self.robot.base = self.robot.base * SE3(move_step, 0, 0) 
             mover.update_meshes(self.robot.q) #platform follows the base. instead of (ur3_base_mesh.T = ur3_base_mesh.T * SE3(move_step, 0, 0))
-            mover.workcell.env.step(0.05)
+            mover.workcell.step(0.05) #workcell.step instead of env.step so the xbox estop gets checked while sliding too
         return True
-
-    def move_and_grab(self, mover, item, item_name="item", steps=30): #move the UR3 to item position and attach it to the end-effector. uses inverse kinematics to find the joint angles needed to reach the item. also attaches it. would be a seperate command but i think concantenating it like this would be a wise decision here.
-        item_pos = item.T[0:3, 3] #gets item position
-        target_pose = SE3(item_pos[0], item_pos[1], item_pos[2]) #gest xyz pos
-        result = self.robot.ikine_LM(target_pose, q0=self.robot.q, mask=[1,1,1,0,0,0]) #usual
-        mover.move_to_q(result.q, steps) #same jtraj move as before but the OO mover does it so the estop works. mover taken from wills code
-
-        mover.grab(item)  # attach item to end-effector. the mover keeps it there on every move now
-        mover.workcell.env.step()

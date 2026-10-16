@@ -3,6 +3,7 @@ from math import pi
 from spatialgeometry import Mesh
 from spatialmath import SE3
 from spatialmath.base import troty, trotz
+from ir_support_extra_parts.parts import part_mesh #estop and safety man from A1
 
 #all the bar objects from MainRobotSimFile.py but class (object orientated):) each one is kept as self.something so the robots can grab them later
 class BarScene:
@@ -86,3 +87,26 @@ class BarScene:
         self.Lemon_pot_scene = Mesh(filename=Lemon_pot_location, color="#504E4E", scale=[0.001, 0.001, 0.001])
         self.Lemon_pot_scene.T = SE3(0.2, -0.2, 0.26)
         env.add(self.Lemon_pot_scene)
+
+        #safety tape (1m long pieces) - taped box from x -2 to 3, y -1 to 2
+        safety_tape_location = os.path.join(item_folder, "safetyTape.stl")
+        tape_poses = [SE3(-2, -1, 0), SE3(-1, -1, 0), SE3(0, -1, 0), SE3(1, -1, 0), SE3(2, -1, 0),
+                      SE3(-2, 1.9, 0), SE3(-1, 1.9, 0), SE3(0, 1.9, 0), SE3(1, 1.9, 0), SE3(2, 1.9, 0),
+                      SE3(-2, 0, 0) * trotz(-pi/2), SE3(-2, 1, 0) * trotz(-pi/2), SE3(-2, 2, 0) * trotz(-pi/2),
+                      SE3(2.9, 0, 0) * trotz(-pi/2), SE3(2.9, 1, 0) * trotz(-pi/2), SE3(2.9, 2, 0) * trotz(-pi/2)]
+        self.safety_tapes = []
+        for pose in tape_poses:
+            tape = Mesh(filename=safety_tape_location, color="#F2C200", scale=[0.001, 0.001, 0.001])
+            tape.T = pose
+            env.add(tape)
+            self.safety_tapes.append(tape)
+
+        #Estop, just outside the front tape
+        self.estop = part_mesh("EmergencyStopButton")
+        self.estop.T = SE3(-1.5, 2.1, 0)
+        env.add(self.estop)
+
+        #Safety Man, standing next to the estop
+        self.safety_man = part_mesh("SafetyPerson")
+        self.safety_man.T = SE3(-1.0, 2.4, 0)
+        env.add(self.safety_man)

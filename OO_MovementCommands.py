@@ -19,6 +19,7 @@ import swift
 import numpy as np                # NEW: NUMPY, USED FOR THE RMRC MATHS (ARRAYS, CLIPPING)
 from roboticstoolbox import jtraj, trapezoidal # Minimum jerk profile | NEW: TRAPEZOIDAL GIVES A SMOOTH 0 TO 1 SPEED PROFILE FOR RMRC
 from spatialmath import SE3       
+from OO_Collision import CollisionChecker #my ellipsoids around each link (lab 6 q2)
 
 
 # The workcell class sets up swift and adds the robot, input and safety states to the 3D environment
@@ -31,6 +32,7 @@ class Workcell:
         self.state = "RUNNING"                # Establishes the state as "RUNNING" string for If statements Later
         self.movers = {}                      # The Dictionary that stores both a robots given name and its object from the robot's class file
         self.inputs = []                      # List to store input devices (like the Xbox controller) to check every step uisng poll() - the function that determines whether its been pressed 
+        self.collision_on = False #turned on in the main file. off = robots ignore each other
 
 
     # Add Robot Function
@@ -103,6 +105,7 @@ class RobotMover:
         self.offsets = robot_setup.offsets    # The list of Mesh offsets for updating
         self.home_q = robot_setup.home_q      # The Starting Pose for the 'return to home' button
         self.held = [] # ATTACHMENT: items this robot is carrying, as (mesh, offset from the EE) pairs
+        self.checker = CollisionChecker(self.robot) #ellipsoids around every link of this robot
 
     # Grab (ATTACHMENT)
     # Attaches an item to the end effector, same idea as the lab 4 pen: item pose = fkine().A @ offset
@@ -148,15 +151,31 @@ class RobotMover:
     # Used for Sliders in the GUI
     def move_to_q(self, q_goal, steps=50):
         traj = jtraj(self.robot.q, q_goal, steps) # jtrag from weekly labs. Minimum jerk movemet profile
+        touching = self.check_collision(self.robot.q)
 
         for q_step in traj.q:                     # In between each step in the movement
             if self.workcell.state != "RUNNING":  # If its not meant to be moving, dont move
                 print("Motion aborted")           # Print
                 return False                      # End function cancelled, didnt reach end of movement
+            if not touching and self.check_collision(q_step): #lab 5 style stop before a collision (skipped if already touching so it can get out)
+                print("UNSAFE: Robot stopped, collision ahead")
+                return False
             self.robot.q = q_step                 # set the robot to this step
             self.update_meshes(q_step)            # move the meshes
             self.workcell.step()                  # check inputs, updates swift
         return True                               # reached the end of movement
+
+    # Check Collision: lab 5 check_collision, but the obstacle is the other robots' links as points (lab 6 ellipsoids)
+    def check_collision(self, q):
+        if not self.workcell.collision_on:
+            return False
+        for other in self.workcell.movers.values():
+            if other is self:
+                continue
+            points = other.checker.link_points(other.robot.q)
+            if self.checker.collides(q, points):
+                return True
+        return False
 
     # SOLVE IK (NEW)
     # THE ONE PLACE INVERSE KINEMATICS IS SOLVED. MOVE_TO_POSE AND JOG BOTH USE IT.
@@ -181,7 +200,26 @@ class RobotMover:
     def move_to_pose(self, T_target, steps=50):
         q_goal = self.solve_ik(T_target)          # solve inverse kinematics | NOW DONE BY SOLVE_IK
         print("IK Solution found (radians):", q_goal)  #print to terminal for debugging
-        return self.move_to_q(q_goal, steps)    # use function above to move to joints found
+        if self.move_to_q(q_goal, steps):    # use function above to move to joints found
+            return True
+        if self.workcell.state != "RUNNING":
+            return False
+
+        #stopped by a collision, so re-plan like the A1 lift step: up, across above the target, down. tries higher if still blocked
+        for lift in [0.2, 0.4]:
+            print("Re-planning: going over the top at", lift, "m")
+            try:
+                q_up_here = self.solve_ik(SE3(0, 0, lift) * self.robot.fkine(self.robot.q))
+                q_up_there = self.solve_ik(SE3(0, 0, lift) * T_target, q0=q_up_here)
+                q_down = self.solve_ik(T_target, q0=q_up_there)
+            except ValueError:
+                continue
+            if self.move_to_q(q_up_here, steps // 2) and self.move_to_q(q_up_there, steps) and self.move_to_q(q_down, steps // 2):
+                return True
+            if self.workcell.state != "RUNNING":
+                return False
+        print("No clear path - robot staying put")
+        return False
 
     # PICK DROP: ABOVE, DOWN, GRAB (IF GIVEN AN ITEM) OR LET GO, BACK UP. STOPS ON E-STOP
     def pick_drop(self, xyz, item=None, lift=0.1, steps=50):
