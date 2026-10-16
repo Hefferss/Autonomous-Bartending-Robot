@@ -7,6 +7,7 @@ from OO_JamesRobotTest import ABBIRB140
 from OO_JackRobotTest import StaubliTX60 #jacks robot
 from OO_UR3 import UR3Robot #ur3 on its platform
 from OO_Scene_Objects import BarScene #tables, rail, bottles and all that
+from math import pi                                     # the constant pi
 
 # MOVED HERE FROM OO_Robot_Movements.py. THE CODE IS THE SAME, IT ONLY USES THE FUNCTIONS FROM OO_MovementCommands.py
 # (move_to_pose, move_to_q, pick_drop, tuck, grab, release) AND THE UR3 RAIL'S move_base
@@ -22,6 +23,8 @@ WILL_SHAKER_SPOT = (0.72, 0.62) # Will keeps the shaker here to pour into
 def shaker_to_will(workcell, scene, ur3_setup):
     ur3 = workcell.movers["UR3"]                          # robots from the workcell
     will = workcell.movers["Will's Robot"]
+    jam = workcell.movers["James' Robot"]
+    jack = workcell.movers["Jack's Robot"]
     shaker = scene.cocktail_shaker_scene
 
     ur3.release() # RESET SO THE BUTTON CAN BE PRESSED AGAIN
@@ -30,14 +33,16 @@ def shaker_to_will(workcell, scene, ur3_setup):
 
     ur3_setup.move_base(ur3, SHAKER_STORAGE[0]) # slide to the shaker
     ur3.pick_drop(SHAKER_STORAGE, shaker) # grab it
-    ur3.tuck() # UR3 pulls back over the rail so it's out of the way
+    ur3.tuck(SE3(0, 0.4, 0)) # UR3 pulls back over the rail so it's out of the way
     ur3_setup.move_base(ur3, WILL_DROP_ZONE[0]) # slide over to Will
     ur3.pick_drop((*WILL_DROP_ZONE, SHAKER_TOP)) # put it in his drop off zone
     ur3.tuck() # get out of the way before Will reaches in
     will.pick_drop((*WILL_DROP_ZONE, SHAKER_TOP), shaker) # Will picks it up
     will.pick_drop((*WILL_SHAKER_SPOT, SHAKER_TOP)) # and puts it on his shaker spot
     will.move_to_q(will.home_q) # Will stands back up
-
+    jam.move_to_q((0, pi/2, -pi/2, 0, 0, 0)) # James stands back up
+    jack.move_to_q((0.5, pi/2, -pi/2, 1, 3, 9)) # Jack stands back up
+    will.move_to_q((0.8, pi/2, -pi/2, 0.5, 7, 3)) # Will stands back up
 
 if __name__ == "__main__":
     workcell = Workcell()
