@@ -79,6 +79,33 @@ def make_cocktail(workcell, scene, ur3_setup):
     jack.move_to_q(jack.home_q)
 
 
+# SAVES THE START POSE OF EVERYTHING ON THE SCENE (ANY OBJECT WITH A .T). ALSO LOOKS INSIDE LISTS.
+# SO ANY OBJECT YOU ADD TO BarScene AS self.something IS TRACKED WITHOUT CHANGING THIS CODE
+def save_start_poses(scene):
+    start_poses = {}
+    for name, thing in vars(scene).items():
+        if name == "env":                          # SKIP THE SWIFT WINDOW ITSELF
+            continue
+        items = thing if isinstance(thing, (list, tuple)) else [thing]   # A LIST OF OBJECTS (E.G. BOTTLES) IS HANDLED TOO
+        for obj in items:
+            if hasattr(obj, "T") and not callable(obj.T):
+                start_poses[obj] = obj.T.copy()    # .copy() SO LATER MOVES DON'T CHANGE THE SAVED POSE
+    return start_poses
+
+# PUTS EVERY ROBOT AND EVERY OBJECT BACK TO HOW THE SCENE STARTED
+def reset_scene(workcell, ur3_setup, start_poses):
+    for mover in workcell.movers.values():         # LET GO OF ANYTHING A ROBOT IS HOLDING
+        mover.release()
+    ur3_setup.move_base(workcell.movers["UR3"], 0.08)   # RAIL BACK TO ITS START X (0.08 = THE UR3 BASE X). CHANGE IF YOUR RAIL STARTS ELSEWHERE
+    for mover in workcell.movers.values():         # ALL ROBOTS TO HOME, INSTANTLY
+        mover.robot.q = mover.home_q
+        mover.update_meshes(mover.home_q)
+    for obj, pose in start_poses.items():          # ALL OBJECTS TO THEIR START POSE
+        obj.T = pose.copy()
+    print("Scene reset")
+
+
+
 if __name__ == "__main__":
     workcell = Workcell()
     workcell.add_robot("James' Robot", ABBIRB140(base=transl(-1, 0.75, 0.25))) # add the James Robot. on the robot bar table
@@ -88,6 +115,7 @@ if __name__ == "__main__":
     workcell.add_robot("Will's Robot", KawasakiRS007N(base=transl(1, 0.75, 0.25))) # add the Kawasaki under a name
     workcell.launch() # open Swift and show every robot
     scene = BarScene(workcell.env) # adds all the objects. has to be after launch
+    start_poses = save_start_poses(scene)          # NEW: SAVE WHERE EVERYTHING STARTS
     workcell.collision_on = True #every robot checks the other robots before each step (False to turn off)
 
     # SCENE BUTTONS: LABEL -> FUNCTION. TO ADD ONE:
@@ -96,6 +124,7 @@ if __name__ == "__main__":
     # 3. ADD A LINE BELOW, E.G.  "Pour Drink": lambda: pour_drink(workcell, scene),  (LAMBDA STOPS IT RUNNING NOW)
     scenes = {
         "Make Cocktail": lambda: make_cocktail(workcell, scene, ur3),
+        "Reset Scene": lambda: reset_scene(workcell, ur3, start_poses),   # NEW. NAME MUST MATCH THE GUI BUTTON
     }
     gui = RobotGUI(workcell, scenes=scenes) # button label -> scene
     gui.build() # add the buttons, dropdown and sliders

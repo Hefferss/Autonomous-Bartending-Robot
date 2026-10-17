@@ -54,7 +54,6 @@ class RobotGUI:
 
         # -- Block 2: operations (preset movements for the selected robot) --
         env.add(swift.Label("--- OPERATIONS ---"))
-        env.add(swift.Button(lambda *args: self.queue("home"), "Go Home"))
         if self.demo_targets:                             # OLD SINGLE-POSE DEMO, ONLY IF DEMO POSES WERE GIVEN
             env.add(swift.Button(lambda *args: self.queue("demo"), "Run Demo Move"))
         # SCENE BUTTONS: QUEUED HERE, PLAYED IN RUN() ("label=label" LOCKS IN THE LABEL LIKE THE JOG BUTTONS)
