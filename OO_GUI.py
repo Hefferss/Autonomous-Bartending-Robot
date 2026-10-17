@@ -159,6 +159,9 @@ class RobotGUI:
         angle = np.radians(float(value))                  # slider is in degrees -> radians
         angle = np.clip(angle, robot.qlim[0, j], robot.qlim[1, j])  # keep inside this robot's joint limits
         q[j] = angle                                      # change joint j
+        if mover.check_collision(q): # same table + robot check as move_to_q, so the slider can't push into the table
+            print("UNSAFE: slider move blocked, collision")
+            return
         robot.q = q                                       # set the robot to the new angles
         mover.update_meshes(q)                            # move the meshes to match
 
