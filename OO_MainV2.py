@@ -18,7 +18,8 @@ SHAKER_START = SE3(0, -0.2, 0.255) # WHERE THE SHAKER SITS WHEN THE SCENE STARTS
 SHAKER_TOP = 0.465 # top of the shaker when it's sitting on any table
 WILL_DROP_ZONE = (0.85, 0.45) # UR3 leaves things here for Will. front of the (stretched) robot table
 WILL_SHAKER_SPOT = (0.72, 0.62) # Will keeps the shaker here to pour into
-JACK_DROP_ZONE = (0.4, 0.45) # Will leaves the shaker here for Jack
+JACK_DROP_ZONE = (0.35, 0.45) # Will leaves the shaker here for Jack
+JACK_DROP_LID = (0.43, 0.45) # Will leaves the shaker here for Jack
 LID_STORAGE = (0.7, -0.25, 0.267) # top of the lid on the storage table (lid is 12 mm thick)
 LID_START = SE3(0.7, -0.25, 0.045) # where the lid sits when the scene starts (same as OO_Scene_Objects.py)
 LID_DROP = (-0.3, 0.45, 0.267) # UR3 leaves the lid here for Jack
@@ -64,11 +65,12 @@ def make_cocktail(workcell, scene, ur3_setup):
     #ur3.pick_drop((*LID_DROP[:2], UR3_LID_GRAB), lid)
     ur3.pick_drop((*LID_DROP[:2], UR3_LID_GRAB), tool=SE3.Rx(pi) * SE3.Ry(-pi/2))
     ur3.tuck()
+    ur3_setup.move_base(ur3, -1.2)
 
     jack.pick_drop(LID_DROP, lid) # Jack puts the lid on, grabs both and shakes
     # RMRC: LOWER THE LID STRAIGHT DOWN ONTO THE SHAKER
-    jack.move_to_pose(SE3(*JACK_DROP_ZONE, LID_ON_SHAKER + 0.1) * SE3.Rx(pi)) # NORMAL MOVE TO 10 CM ABOVE THE SHAKER (PATH DOESN'T MATTER HERE)
-    T_lid_on = SE3(*JACK_DROP_ZONE, LID_ON_SHAKER) * SE3.Rx(pi) # WHERE THE HAND ENDS UP WHEN THE LID IS ON
+    jack.move_to_pose(SE3(*JACK_DROP_LID, LID_ON_SHAKER + 0.1) * SE3.Rx(pi)) # NORMAL MOVE TO 10 CM ABOVE THE SHAKER (PATH DOESN'T MATTER HERE)
+    T_lid_on = SE3(*JACK_DROP_LID, LID_ON_SHAKER) * SE3.Rx(pi) # WHERE THE HAND ENDS UP WHEN THE LID IS ON
     if not jack.move_rmrc(T_lid_on, duration=2.0, steps=40): # STRAIGHT LINE DOWN, EXISTING RMRC CODE
         jack.move_to_pose(T_lid_on) # IF RMRC FAILED (SINGULARITY, OUT OF REACH), FALL BACK TO THE NORMAL MOVE
     jack.grab(shaker)
