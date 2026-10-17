@@ -64,7 +64,11 @@ def make_cocktail(workcell, scene, ur3_setup):
     ur3.tuck()
 
     jack.pick_drop(LID_DROP, lid) # Jack puts the lid on, grabs both and shakes
-    jack.move_to_pose(SE3(*JACK_DROP_ZONE, LID_ON_SHAKER) * SE3.Rx(pi))
+    # RMRC: LOWER THE LID STRAIGHT DOWN ONTO THE SHAKER
+    jack.move_to_pose(SE3(*JACK_DROP_ZONE, LID_ON_SHAKER + 0.1) * SE3.Rx(pi)) # NORMAL MOVE TO 10 CM ABOVE THE SHAKER (PATH DOESN'T MATTER HERE)
+    T_lid_on = SE3(*JACK_DROP_ZONE, LID_ON_SHAKER) * SE3.Rx(pi) # WHERE THE HAND ENDS UP WHEN THE LID IS ON
+    if not jack.move_rmrc(T_lid_on, duration=2.0, steps=40): # STRAIGHT LINE DOWN, EXISTING RMRC CODE
+        jack.move_to_pose(T_lid_on) # IF RMRC FAILED (SINGULARITY, OUT OF REACH), FALL BACK TO THE NORMAL MOVE
     jack.grab(shaker)
     jack.move_to_pose(SE3(*JACK_DROP_ZONE, 0.8) * SE3.Rx(pi))
     q_shake = jack.robot.q
