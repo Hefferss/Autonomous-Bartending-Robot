@@ -65,7 +65,7 @@ class KawasakiRS007N:
         self.meshes = [] # empty list to fill
         for name in file_names:                          # go through each filename
             mesh_path = os.path.join(mesh_folder, name)  # full path to the file
-            mesh = Mesh(filename=mesh_path, color="#5B5B5B8D", scale=[0.001, 0.001, 0.001])  # Swift Assumes unit in metres when its actually meant to be mm hence the conversion
+            mesh = Mesh(filename=mesh_path, color="#B0B0B0FF", scale=[0.001, 0.001, 0.001])  # Swift Assumes unit in metres when its actually meant to be mm hence the conversion
             self.meshes.append(mesh)                     # add it to the list
 
         # These are the Mesh Offsets obtained by matching with cylinder bot and trial and error. For me (Will) i think it was required because I
