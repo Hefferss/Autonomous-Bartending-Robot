@@ -157,14 +157,29 @@ class RobotMover:
         return True
 
     # SOLVE IK: tries from the current pose, then from home, with a fixed seed. only keeps answers above the table. raises ValueError if none work
+    # SOLVE IK: TRIES SEVERAL STARTS, KEEPS ONLY ANSWERS INSIDE THE JOINT LIMITS AND ABOVE THE TABLE,
+    # THEN PICKS THE ONE CLOSEST TO THE CURRENT JOINT ANGLES (AVOIDS WRIST FLIPS AND ODD PATHS)
     def solve_ik(self, T_target, q0=None):
         if q0 is None:
             q0 = self.robot.q
+        q_now = np.array(self.robot.q, dtype=float)
+        best_q = None
+        best_dist = None
         for start in [q0, self.home_q]:
             ik_sol = self.robot.ikine_LM(T_target, q0=start, joint_limits=True, seed=0)
-            if ik_sol.success and self.above_table(ik_sol.q):
-                return ik_sol.q
-        raise ValueError("Inverse kinematics failed to find a valid solution for the target pose!")
+            if not ik_sol.success:
+                continue
+            q = np.array(ik_sol.q, dtype=float)
+            if np.any(q < self.robot.qlim[0]) or np.any(q > self.robot.qlim[1]):   # EXPLICIT LIMIT CHECK
+                continue
+            if not self.above_table(q):
+                continue
+            dist = np.linalg.norm(q - q_now)               # HOW FAR THE JOINTS HAVE TO TRAVEL
+            if best_dist is None or dist < best_dist:
+                best_q, best_dist = q, dist
+        if best_q is None:
+            raise ValueError("Inverse kinematics failed to find a valid solution for the target pose!")
+        return best_q
 
     # Move to Pose: IK then move_to_q. if a collision stops it, re-plan like the A1 lift step: up, across above the target, down (tries 0.2 then 0.4 m)
     def move_to_pose(self, T_target, steps=50):
@@ -192,8 +207,8 @@ class RobotMover:
         return False
 
     # PICK DROP: ABOVE, DOWN, GRAB (IF GIVEN AN ITEM) OR LET GO, BACK UP. STOPS ON E-STOP
-    def pick_drop(self, xyz, item=None, lift=0.1, steps=50):
-        T_spot = SE3(*xyz) * SE3.Rx(np.pi)
+    def pick_drop(self, xyz, item=None, lift=0.1, steps=50, tool=SE3.Rx(np.pi)):
+        T_spot = SE3(*xyz) * tool
         T_above = SE3(0, 0, lift) * T_spot
         if not self.move_to_pose(T_above, steps):
             return False
@@ -207,7 +222,7 @@ class RobotMover:
 
     # TUCK: PULLS THE EE BACK OVER ITS OWN BASE, OUT OF THE WAY (X FOLLOWS THE BASE ON THE RAIL)
     def tuck(self, y=0.0, height=0.7, steps=50):
-        tuck_pos = [0, -pi/2, pi/4, 0, 0, 0]
+        tuck_pos = [0, -pi/2, pi/2, 0, 0, 0]
         return self.move_to_q(tuck_pos)
         #return self.move_to_pose(SE3(self.robot.base.t[0], y, height) * SE3.Rx(np.pi), steps)
 

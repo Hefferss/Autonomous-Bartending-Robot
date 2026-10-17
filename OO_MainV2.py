@@ -13,7 +13,7 @@ from math import pi # the constant pi
 # (move_to_pose, move_to_q, pick_drop, tuck, grab, release) AND THE UR3 RAIL'S move_base
 
 # where the EE goes to grab the shaker (its top). shaker is 0.21 tall, tables are 0.25 high
-SHAKER_STORAGE = (0, -0.2, 0.465)
+SHAKER_STORAGE = (-0.08, -0.2, 0.465)
 SHAKER_START = SE3(0, -0.2, 0.255) # WHERE THE SHAKER SITS WHEN THE SCENE STARTS (SAME AS OO_Scene_Objects.py)
 SHAKER_TOP = 0.465 # top of the shaker when it's sitting on any table
 WILL_DROP_ZONE = (0.85, 0.45) # UR3 leaves things here for Will. front of the (stretched) robot table
@@ -57,10 +57,12 @@ def make_cocktail(workcell, scene, ur3_setup):
     will.move_to_q(will.home_q)
 
     ur3_setup.move_base(ur3, LID_STORAGE[0]) # UR3 fetches the lid for Jack
-    ur3.pick_drop((*LID_STORAGE[:2], UR3_LID_GRAB), lid)
+    #ur3.pick_drop((*LID_STORAGE[:2], UR3_LID_GRAB), lid)
+    ur3.pick_drop((*LID_STORAGE[:2], UR3_LID_GRAB), lid, tool=SE3.Rx(pi) * SE3.Ry(-pi/2))
     ur3.tuck()
     ur3_setup.move_base(ur3, LID_DROP[0])
-    ur3.pick_drop((*LID_DROP[:2], UR3_LID_GRAB))
+    #ur3.pick_drop((*LID_DROP[:2], UR3_LID_GRAB), lid)
+    ur3.pick_drop((*LID_DROP[:2], UR3_LID_GRAB), tool=SE3.Rx(pi) * SE3.Ry(-pi/2))
     ur3.tuck()
 
     jack.pick_drop(LID_DROP, lid) # Jack puts the lid on, grabs both and shakes
