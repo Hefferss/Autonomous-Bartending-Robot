@@ -6,6 +6,7 @@ import numpy as np
 from roboticstoolbox import jtraj, trapezoidal
 from spatialmath import SE3       
 from OO_Collision import CollisionChecker
+from math import pi 
 
 TABLE_HEIGHT = 0.25 # top of every table. no robot joint is allowed below this
 TABLE_CLEARANCE = 0.03 # links have thickness, so every joint away from the gripper stays this far above the table
@@ -167,6 +168,8 @@ class RobotMover:
 
     # Move to Pose: IK then move_to_q. if a collision stops it, re-plan like the A1 lift step: up, across above the target, down (tries 0.2 then 0.4 m)
     def move_to_pose(self, T_target, steps=50):
+        if self.workcell.state != "RUNNING":              # NEW: AFTER AN E-STOP, DON'T EVEN TRY THE IK
+            return False
         q_goal = self.solve_ik(T_target)
         if self.move_to_q(q_goal, steps):
             return True
@@ -204,7 +207,9 @@ class RobotMover:
 
     # TUCK: PULLS THE EE BACK OVER ITS OWN BASE, OUT OF THE WAY (X FOLLOWS THE BASE ON THE RAIL)
     def tuck(self, y=0.0, height=0.7, steps=50):
-        return self.move_to_pose(SE3(self.robot.base.t[0], y, height) * SE3.Rx(np.pi), steps)
+        tuck_pos = [0, -pi/2, pi/4, 0, 0, 0]
+        return self.move_to_q(tuck_pos)
+        #return self.move_to_pose(SE3(self.robot.base.t[0], y, height) * SE3.Rx(np.pi), steps)
 
     # MOVE RMRC (NEW)
     # RESOLVED MOTION RATE CONTROL, FOLLOWING THE LAB 9 SOLUTION (QUESTION 1). THE STEP NUMBERS BELOW MATCH THE LAB.
