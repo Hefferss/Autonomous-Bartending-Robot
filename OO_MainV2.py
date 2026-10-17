@@ -24,7 +24,6 @@ LID_START = SE3(0.7, -0.25, 0.045) # where the lid sits when the scene starts (s
 LID_DROP = (-0.3, 0.45, 0.267) # UR3 leaves the lid here for Jack
 LID_ON_SHAKER = 0.477 # top of the lid once it's on the shaker
 
-
 # the whole cocktail in one go: UR3 -> Will -> Jack, UR3 brings Jack the lid, Jack puts it on and shakes
 def make_cocktail(workcell, scene, ur3_setup):
     ur3 = workcell.movers["UR3"] # robots from the workcell
