@@ -8,6 +8,7 @@ from spatialmath import SE3
 from OO_Collision import CollisionChecker
 
 TABLE_HEIGHT = 0.25 # top of every table. no robot joint is allowed below this
+TABLE_CLEARANCE = 0.03 # links have thickness, so every joint away from the gripper stays this far above the table
 
 
 # The workcell class sets up swift and adds the robot, input and safety states to the 3D environment
@@ -142,9 +143,17 @@ class RobotMover:
                 return True
         return False
 
-    # Above Table: true if every joint is above the table top (links are straight, so checking the joints is enough)
+    # Above Table: the gripper end (within 10 cm of the tip) can go down to the table top so it can pick things up. every other joint stays TABLE_CLEARANCE above it
     def above_table(self, q):
-        return all(T.t[2] > TABLE_HEIGHT - 0.01 for T in self.robot.fkine_all(q)[1:])
+        frames = self.robot.fkine_all(q)
+        tip = self.robot.fkine(q).t
+        for T in frames[1:]:
+            if np.allclose(T.t, frames[0].t):
+                continue
+            near_tip = np.linalg.norm(T.t - tip) < 0.1
+            if T.t[2] < TABLE_HEIGHT - 0.005 or (not near_tip and T.t[2] < TABLE_HEIGHT + TABLE_CLEARANCE):
+                return False
+        return True
 
     # SOLVE IK: tries from the current pose, then from home, with a fixed seed. only keeps answers above the table. raises ValueError if none work
     def solve_ik(self, T_target, q0=None):
@@ -290,6 +299,9 @@ class RobotMover:
                     qdot[i, j] = 0 # STOP THE MOTOR
             q_matrix[i + 1, :] = q_matrix[i, :] + delta_t * qdot[i, :] # NEXT JOINT STATE FROM THE JOINT VELOCITIES
 
+            if self.check_collision(q_matrix[i + 1, :]): # same table + robot check as move_to_q
+                print("UNSAFE: RMRC stopped, collision ahead")
+                return False
             robot.q = q_matrix[i + 1, :] # THE LAB PLAYS THESE AT THE END. HERE EACH STEP IS PLAYED AS IT IS CALCULATED
             self.update_meshes(robot.q) # MOVE THE MESHES TO MATCH
             self.workcell.step() # CHECK INPUTS, UPDATE SWIFT

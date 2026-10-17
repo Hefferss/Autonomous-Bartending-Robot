@@ -16,6 +16,8 @@ class UR3Robot:
 
         self.robot = UR3BaseFix() #toolbox UR3. comes with its own meshes so no stls needed for the arm
         self.home_q = np.zeros(self.robot.n) #same start pose as UR3.py
+        #joint limits (deg) tighter than the toolbox's +-360 so it can't fold into itself: shoulder stays above horizontal, elbow can't fold flat, no full spins
+        self.robot.qlim = np.radians([[-180, -180, -160, -180, -180, -180], [ 180,    0,  160,  180,  180,  180]])
         if base is not None:
             self.robot.base = base
 

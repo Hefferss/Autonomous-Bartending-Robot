@@ -22,6 +22,7 @@ JACK_DROP_ZONE = (0.4, 0.45) # Will leaves the shaker here for Jack
 LID_STORAGE = (0.7, -0.25, 0.267) # top of the lid on the storage table (lid is 12 mm thick)
 LID_START = SE3(0.7, -0.25, 0.045) # where the lid sits when the scene starts (same as OO_Scene_Objects.py)
 LID_DROP = (-0.3, 0.45, 0.267) # UR3 leaves the lid here for Jack
+UR3_LID_GRAB = 0.31 # UR3's wrist sticks out ~4 cm past its tool point, so it holds the lid from 4 cm up or the wrist goes into the table
 LID_ON_SHAKER = 0.477 # top of the lid once it's on the shaker
 
 # the whole cocktail in one go: UR3 -> Will -> Jack, UR3 brings Jack the lid, Jack puts it on and shakes
@@ -56,10 +57,10 @@ def make_cocktail(workcell, scene, ur3_setup):
     will.move_to_q(will.home_q)
 
     ur3_setup.move_base(ur3, LID_STORAGE[0]) # UR3 fetches the lid for Jack
-    ur3.pick_drop(LID_STORAGE, lid)
+    ur3.pick_drop((*LID_STORAGE[:2], UR3_LID_GRAB), lid)
     ur3.tuck()
     ur3_setup.move_base(ur3, LID_DROP[0])
-    ur3.pick_drop(LID_DROP)
+    ur3.pick_drop((*LID_DROP[:2], UR3_LID_GRAB))
     ur3.tuck()
 
     jack.pick_drop(LID_DROP, lid) # Jack puts the lid on, grabs both and shakes
