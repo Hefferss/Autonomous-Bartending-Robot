@@ -60,14 +60,14 @@ class RobotGUI:
             env.add(swift.Button(lambda *args, label=label: self.queue("scene", label), label))
 
         # -- Block 3: safety buttons (these affect ALL robots) --
-        env.add(swift.Label("--- SAFETY (all robots) ---"))
+        env.add(swift.Label("--- SAFETY ---"))
         env.add(swift.Button(self.on_estop, "EMERGENCY STOP"))
         env.add(swift.Button(self.on_reset, "1. RESET E-STOP"))
         env.add(swift.Button(self.on_restart, "2. RESTART"))
 
         # -- Block 4: robot selector (dropdown) --
         # Swift calls on_select_robot with the INDEX of the chosen option (0, 1, 2...).
-        env.add(swift.Label("--- SELECTED ROBOT ---"))
+        env.add(swift.Label("- SELECTED ROBOT -"))
         env.add(swift.Select(self.on_select_robot, desc="Control robot:",
                              options=self.names, value=0))
 
@@ -81,7 +81,7 @@ class RobotGUI:
         # -- Block 6: joint sliders --
         # Make as many sliders as the robot with the MOST joints. Sliders
         # beyond the selected robot's joint count are simply ignored.
-        env.add(swift.Label("--- JOINT CONTROL (degrees) ---"))
+        env.add(swift.Label("-- JOINT CONTROL --"))
         most_joints = max(m.robot.n for m in self.workcell.movers.values())
         first_home = self.current().home_q                # start values from the first robot
         for j in range(most_joints):                      # one slider per joint
@@ -96,7 +96,7 @@ class RobotGUI:
             env.add(slider)
 
         # -- Block 7: jog buttons --
-        env.add(swift.Label("--- END EFFECTOR JOG ---"))
+        env.add(swift.Label("- END EFFECTOR JOG -"))
         s = self.jog_step                                 # short name for the step size
         jog_buttons = [("+X", (s, 0, 0)), ("-X", (-s, 0, 0)),     # name and (dx, dy, dz)
                        ("+Y", (0, s, 0)), ("-Y", (0, -s, 0)),

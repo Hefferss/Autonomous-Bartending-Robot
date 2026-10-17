@@ -26,8 +26,8 @@ LID_DROP = (-0.3, 0.45, 0.267) # UR3 leaves the lid here for Jack
 UR3_LID_GRAB = 0.31 # UR3's wrist sticks out ~4 cm past its tool point, so it holds the lid from 4 cm up or the wrist goes into the table
 LID_ON_SHAKER = 0.477 # top of the lid once it's on the shaker
 
-# the whole cocktail in one go: UR3 -> Will -> Jack, UR3 brings Jack the lid, Jack puts it on and shakes
-def make_cocktail(workcell, scene, ur3_setup):
+# WILL'S PART: UR3 BRINGS THE SHAKER, WILL MOVES IT AND PUTS IT DOWN AT JACK'S DROP ZONE (THE HAND OFF TO JACK)
+def will_part(workcell, scene, ur3_setup):
     ur3 = workcell.movers["UR3"] # robots from the workcell
     will = workcell.movers["Will's Robot"]
     jam = workcell.movers["James' Robot"]
@@ -54,8 +54,16 @@ def make_cocktail(workcell, scene, ur3_setup):
     will.move_to_q((0.8, pi/2, -pi/2, 0.5, 7, 3)) # Will stands back up
 
     will.pick_drop((*WILL_SHAKER_SPOT, SHAKER_TOP), shaker) # Will passes the shaker to Jack
-    will.pick_drop((*JACK_DROP_ZONE, SHAKER_TOP))
+    will.pick_drop((*JACK_DROP_ZONE, SHAKER_TOP)) # HAND OFF: THE SHAKER IS NOW DOWN FOR JACK
     will.move_to_q(will.home_q)
+
+
+# JACK'S PART: UR3 BRINGS THE LID, JACK PUTS IT ON AND SHAKES. NEEDS THE SHAKER ALREADY AT JACK_DROP_ZONE (WILL'S PART FIRST)
+def jack_part(workcell, scene, ur3_setup):
+    ur3 = workcell.movers["UR3"] # robots from the workcell
+    jack = workcell.movers["Jack's Robot"]
+    shaker = scene.cocktail_shaker_scene
+    lid = scene.cocktail_shaker_lid_scene
 
     ur3_setup.move_base(ur3, LID_STORAGE[0]) # UR3 fetches the lid for Jack
     #ur3.pick_drop((*LID_STORAGE[:2], UR3_LID_GRAB), lid)
@@ -81,6 +89,20 @@ def make_cocktail(workcell, scene, ur3_setup):
         jack.move_to_q(q_shake + [0, 0, 0, 0, -0.4, -pi], 10)
     jack.pick_drop((*JACK_DROP_ZONE, LID_ON_SHAKER))
     jack.move_to_q(jack.home_q)
+
+
+# JAMES' PART: PLACEHOLDER, JAMES HAS NO TASK YET. PUT HIS MOVES HERE
+def james_part(workcell, scene, ur3_setup):
+    jam = workcell.movers["James' Robot"]
+    jam.move_to_q(jam.home_q)
+
+
+# THE WHOLE COCKTAIL: WILL, THEN JACK, THEN JAMES. SKIPS THE REST IF AN E-STOP HAPPENED
+def make_cocktail(workcell, scene, ur3_setup):
+    for part in (will_part, jack_part, james_part):
+        if workcell.state != "RUNNING":
+            return
+        part(workcell, scene, ur3_setup)
 
 
 # SAVES THE START POSE OF EVERYTHING ON THE SCENE (ANY OBJECT WITH A .T). ALSO LOOKS INSIDE LISTS.
@@ -127,7 +149,10 @@ if __name__ == "__main__":
     # 2. RESET ANY ITEMS IT MOVES AT THE START SO IT CAN BE REPLAYED
     # 3. ADD A LINE BELOW, E.G.  "Pour Drink": lambda: pour_drink(workcell, scene),  (LAMBDA STOPS IT RUNNING NOW)
     scenes = {
-        "Make Cocktail": lambda: make_cocktail(workcell, scene, ur3),
+        "Make Cocktail": lambda: make_cocktail(workcell, scene, ur3), # ALL THREE IN ORDER: WILL, JACK, JAMES
+        "Will's Robot": lambda: will_part(workcell, scene, ur3),
+        "Jack's Robot": lambda: jack_part(workcell, scene, ur3), # ONLY WORKS AFTER WILL'S PART (SHAKER MUST BE AT JACK_DROP_ZONE)
+        "James' Robot": lambda: james_part(workcell, scene, ur3),
         "Reset Scene": lambda: reset_scene(workcell, ur3, start_poses),   # NEW. NAME MUST MATCH THE GUI BUTTON
     }
     gui = RobotGUI(workcell, scenes=scenes) # button label -> scene
