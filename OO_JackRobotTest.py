@@ -11,8 +11,8 @@ class StaubliTX60:
 
         #links for the staubli. the qlims are specific. yay.
         link1 = DHLink(d=0.375, a=0, alpha=pi/2, qlim=[-pi, pi]) #0.375 from sheet, lines up with stl now mesh transforms are right
-        link2 = DHLink(d=0, a=0.29, alpha=0, qlim=[-127.5*pi/180, 127.5*pi/180])
-        link3 = DHLink(d=-0.02, a=0, alpha=-pi/2, qlim=[-142.5*pi/180, 142.5*pi/180]) #negative so offset is same side as stl
+        link2 = DHLink(d=0, a=0.29, alpha=0, qlim=[-127.5*pi/180 + pi/2, 127.5*pi/180 + pi/2]) #datasheet +-127.5 is from the staubli zero (arm straight up), which is q2 = +90 deg in my DH, so shift by +90
+        link3 = DHLink(d=-0.02, a=0, alpha=-pi/2, qlim=[-142.5*pi/180 - pi/2, 142.5*pi/180 - pi/2]) #negative so offset is same side as stl. datasheet +-142.5 from the staubli zero = q3 -90 deg in my DH, so shift by -90
         link4 = DHLink(d=0.31, a=0, alpha=pi/2, qlim=[-270*pi/180, 270*pi/180])
         link5 = DHLink(d=0, a=0, alpha=-pi/2, qlim=[-121*pi/180, 132.5*pi/180])
         link6 = DHLink(d=0.07, a=0, alpha=0, qlim=[-270*pi/180, 270*pi/180])

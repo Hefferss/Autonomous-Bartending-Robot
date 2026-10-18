@@ -136,6 +136,8 @@ class RobotMover:
             return False
         if not self.above_table(q):
             return True
+        if self.checker.self_hit(q): # NEW: A LINK GOING THROUGH ITS OWN ROBOT
+            return True
         for other in self.workcell.movers.values():
             if other is self:
                 continue
@@ -222,7 +224,8 @@ class RobotMover:
         if not self.move_to_pose(T_spot, steps // 2):
             return False
         if item is not None:
-            self.grab(item)
+            for it in (item if isinstance(item, (list, tuple)) else [item]): # ONE ITEM OR A LIST OF THEM (E.G. GLASS + UMBRELLA)
+                self.grab(it)
         else:
             self.release()
         return self.move_to_pose(T_above, steps // 2)
@@ -275,6 +278,21 @@ class RobotMover:
             return False
         self.release()
         return self.rmrc_to(T_up_drop) # STRAIGHT BACK UP
+
+    # NECK POUR: GRABS A BOTTLE BY ITS NECK AT neck_xyz, RMRC OVER THE SHAKER, TIPS IT, TIPS BACK, RMRC BACK AND PUTS IT DOWN
+    def neck_pour(self, neck_xyz, item, over_xyz, length, tilt=-1.6, hold=20):
+        T_up = SE3(over_xyz[0], over_xyz[1], over_xyz[2] + length + 0.03) * SE3.Rx(np.pi) # NECK OVER THE SHAKER, BOTTOM CLEARS THE RIM
+        T_back = SE3(0, 0, 0.1) * SE3(*neck_xyz) * SE3.Rx(np.pi) # 10 CM ABOVE WHERE IT WAS PICKED UP
+        if not (self.pick_drop(neck_xyz, item) and self.rmrc_to(T_up, duration=2.0, steps=40)):
+            return False
+        if not self.rmrc_to(T_up * SE3.Rx(tilt), orientation_weight=1.0, duration=2.0, steps=40): # RMRC TIP, HAND STAYS PUT
+            return False
+        for i in range(hold): # POURING. workcell.step SO THE E-STOP STILL WORKS
+            if self.workcell.state != "RUNNING":
+                return False
+            self.workcell.step(0.05)
+        return (self.rmrc_to(T_up, orientation_weight=1.0, duration=2.0, steps=40) and self.rmrc_to(T_back, duration=2.0, steps=40)
+                and self.pick_drop(neck_xyz)) # TIP BACK, RMRC BACK, PUT IT DOWN
 
     # POUR: HOLDS THE BOTTLE BY ITS SIDE (radius, mouth = TOP ABOVE THE HAND) AND ROLLS THE WRIST WITH RMRC TO TIP IT OVER over_xyz
     def pour(self, over_xyz, radius, mouth, tilt=1.75, direction=None, hold=20):
