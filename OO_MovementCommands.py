@@ -170,6 +170,7 @@ class RobotMover:
             if not ik_sol.success:
                 continue
             q = np.array(ik_sol.q, dtype=float)
+            q = self.closest_turn(q, q_now) # SAME POSE, BUT NO EXTRA FULL SPINS OF THE WRIST
             if np.any(q < self.robot.qlim[0]) or np.any(q > self.robot.qlim[1]):   # EXPLICIT LIMIT CHECK
                 continue
             if not self.above_table(q):
@@ -180,6 +181,12 @@ class RobotMover:
         if best_q is None:
             raise ValueError("Inverse kinematics failed to find a valid solution for the target pose!")
         return best_q
+
+    # CLOSEST TURN: q AND q +- 360 DEG IS THE SAME POSE. USE WHICHEVER IS CLOSEST TO q_now IF IT'S INSIDE THE LIMITS
+    def closest_turn(self, q, q_now):
+        q_close = q_now + (q - q_now + np.pi) % (2 * np.pi) - np.pi
+        inside = (q_close >= self.robot.qlim[0]) & (q_close <= self.robot.qlim[1])
+        return np.where(inside, q_close, q)
 
     # Move to Pose: IK then move_to_q. if a collision stops it, re-plan like the A1 lift step: up, across above the target, down (tries 0.2 then 0.4 m)
     def move_to_pose(self, T_target, steps=50):
@@ -225,6 +232,65 @@ class RobotMover:
         tuck_pos = [0, -pi/2, pi/2, 0, 0, 0]
         return self.move_to_q(tuck_pos)
         #return self.move_to_pose(SE3(self.robot.base.t[0], y, height) * SE3.Rx(np.pi), steps)
+
+    # RMRC TO: STRAIGHT LINE WITH RMRC, NORMAL MOVE IF RMRC FAILS (SINGULARITY, JOINT LIMIT)
+    def rmrc_to(self, T_target, orientation_weight=0.1, duration=1.0, steps=20):
+        if self.move_rmrc(T_target, duration=duration, steps=steps, orientation_weight=orientation_weight):
+            return True
+        return self.workcell.state == "RUNNING" and self.move_to_pose(T_target)
+
+    # SIDE GRIP: HAND ON THE SIDE OF A BOTTLE, GRIPPER POINTING ALONG direction (DEFAULT: STRAIGHT OUT FROM THE ROBOT)
+    def side_grip(self, centre, radius=0.0, direction=None):
+        d = np.array(direction if direction is not None else np.array(centre[:2]) - self.robot.base.t[:2], dtype=float)
+        d = np.append(d[:2] / np.linalg.norm(d[:2]), 0.0) # GRIPPER POINTS THIS WAY, LEVEL
+        x = np.array([0.0, 0.0, -1.0]) # TOOL X STRAIGHT DOWN
+        return SE3.Rt(np.column_stack([x, np.cross(d, x), d]), np.array(centre) - d * radius), d
+
+    # SIDE PICK DROP: COMES IN SIDEWAYS, GRABS THE BOTTLE LOW DOWN, LIFTS. NO ITEM = PUTS IT DOWN THERE AND BACKS OFF
+    def side_pick_drop(self, centre, radius, item=None, back=0.1, lift=0.1):
+        T_grip, d = self.side_grip(centre, radius)
+        T_back = SE3(*(-d * back)) * T_grip # HAND PULLED BACK FROM THE BOTTLE
+        T_up = SE3(0, 0, lift) * T_grip # HAND STRAIGHT ABOVE THE GRIP SPOT
+        if item is not None:
+            if not (self.move_to_pose(T_back) and self.rmrc_to(T_grip)): # SLIDE IN
+                return False
+            self.grab(item)
+            return self.rmrc_to(T_up) # LIFT
+        if not (self.move_to_pose(T_up) and self.rmrc_to(T_grip)): # LOWER ONTO THE TABLE
+            return False
+        self.release()
+        return self.rmrc_to(T_back) # SLIDE OUT
+
+    # CARRY: PICK UP AND PUT DOWN WITH RMRC, ONE JOINT MOVE ACROSS. PICK IK IS SEEDED FROM THE DROP SO THE ARM NEVER FLIPS SHAPE
+    def carry(self, from_xyz, to_xyz, item, lift=0.1, tool=SE3.Rx(np.pi)):
+        T_pick, T_drop = SE3(*from_xyz) * tool, SE3(*to_xyz) * tool
+        T_up_pick, T_up_drop = SE3(0, 0, lift) * T_pick, SE3(0, 0, lift) * T_drop
+        q_up_drop = self.solve_ik(T_up_drop, q0=self.home_q) # ARM SHAPE ABOVE THE DROP
+        ik_sol = self.robot.ikine_LM(T_up_pick, q0=q_up_drop, joint_limits=True) # SAME SHAPE ABOVE THE PICK
+        q_up_pick = self.closest_turn(ik_sol.q, q_up_drop) if ik_sol.success and self.above_table(ik_sol.q) else self.solve_ik(T_up_pick)
+        if not (self.move_to_q(q_up_pick) and self.rmrc_to(T_pick)): # OVER IT, STRAIGHT DOWN
+            return False
+        self.grab(item)
+        if not (self.rmrc_to(T_up_pick) and self.move_to_q(self.solve_ik(T_up_drop, q0=q_up_drop)) and self.rmrc_to(T_drop)): # UP, ACROSS, DOWN
+            return False
+        self.release()
+        return self.rmrc_to(T_up_drop) # STRAIGHT BACK UP
+
+    # POUR: HOLDS THE BOTTLE BY ITS SIDE (radius, mouth = TOP ABOVE THE HAND) AND ROLLS THE WRIST WITH RMRC TO TIP IT OVER over_xyz
+    def pour(self, over_xyz, radius, mouth, tilt=1.75, direction=None, hold=20):
+        T_up, d = self.side_grip(over_xyz, radius, direction) # GRIPPER LEVEL, POINTING ALONG direction
+        side = np.cross(d, [0, 0, 1]) # THE WAY THE TOP TIPS WHEN THE WRIST ROLLS
+        T_up = SE3(*([0, 0, 0.04] - side * mouth * np.sin(tilt) - [0, 0, mouth * np.cos(tilt)])) * T_up # MOUTH ENDS 4 CM OVER THE SHAKER
+        if not self.move_to_q(self.solve_ik(T_up, q0=self.home_q)): # IK FROM HOME, SO THE WRIST HAS ROOM TO ROLL
+            if not self.move_to_pose(T_up): # COLLISION IN THE WAY: NORMAL MOVE WITH ITS RE-PLAN
+                return False
+        if not self.rmrc_to(T_up * SE3.Rz(tilt), orientation_weight=1.0, duration=2.0, steps=40): # ROLL THE WRIST, HAND STAYS PUT
+            return False
+        for i in range(hold): # POURING. workcell.step SO THE E-STOP STILL WORKS
+            if self.workcell.state != "RUNNING":
+                return False
+            self.workcell.step(0.05)
+        return self.rmrc_to(T_up, orientation_weight=1.0, duration=2.0, steps=40) # ROLL BACK UPRIGHT
 
     # MOVE RMRC (NEW)
     # RESOLVED MOTION RATE CONTROL, FOLLOWING THE LAB 9 SOLUTION (QUESTION 1). THE STEP NUMBERS BELOW MATCH THE LAB.

@@ -25,7 +25,7 @@ class BarScene:
         #lemonSlice.stl 
         lemon_location = os.path.join(item_folder, "Lemon.stl")
         self.lemon_scene = Mesh(filename=lemon_location, color="#F7F7A1")
-        self.lemon_scene.T = SE3(0.22, -0.2, 0.26) * troty(pi/2)
+        self.lemon_scene.T = SE3(0.22, -0.2, 0.255) * troty(pi/2) # lemon slice lying on the table (no pot)
         env.add(self.lemon_scene)
 
         #BarTableRobot.stl
@@ -49,7 +49,7 @@ class BarScene:
         #BetterLemon.stl
         Better_lemon_location = os.path.join(item_folder, "BetterLemon.stl")
         self.Better_lemon_scene = Mesh(filename=Better_lemon_location, color="#F7F7A1", scale=[0.001, 0.001, 0.001])
-        self.Better_lemon_scene.T = SE3(0.2, -0.2, 0.26) * troty(pi/2)
+        self.Better_lemon_scene.T = SE3(0.2, -0.2, 0.25) * troty(pi/2) # half lemon sitting on the table (no pot)
         env.add(self.Better_lemon_scene)
 
         #UR3 rail
@@ -82,11 +82,6 @@ class BarScene:
         self.Umbrella_scene.T = SE3(-0.2, -0.3, 0.255) * trotz(pi/2)
         env.add(self.Umbrella_scene)
 
-        #lemon pot
-        Lemon_pot_location = os.path.join(item_folder, "UmbrellaPot.stl")
-        self.Lemon_pot_scene = Mesh(filename=Lemon_pot_location, color="#504E4E", scale=[0.001, 0.001, 0.001])
-        self.Lemon_pot_scene.T = SE3(0.2, -0.2, 0.26)
-        env.add(self.Lemon_pot_scene)
 
         #cocktail shaker lid, STL is modelled sitting on the shaker so drop it 0.21 to sit on the table
         cocktail_shaker_lid_location = os.path.join(item_folder, "CocktailShakerLid.stl")

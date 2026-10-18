@@ -208,6 +208,23 @@ class CollisionChecker:
                 pts.append(a + s * (b - a))
         return np.array(pts)
 
+    # SELF HIT: TRUE IF ANY LINK GOES THROUGH ANOTHER LINK OF THE SAME ROBOT (E.G. THE FOREARM FOLDING INTO THE BASE)
+    # ONLY REAL LINKS (WITH LENGTH) COUNT, AND LINKS NEXT TO EACH OTHER ARE SKIPPED SINCE THEY ALWAYS TOUCH AT THEIR SHARED JOINT
+    def self_hit(self, q, spacing=0.03):
+        frames = [T.A[:3, 3] for T in self.robot.fkine_all(q)]
+        ellipsoids = self.elipsoids_for_robot_around_links(q)
+        real = [i for i in range(len(ellipsoids)) if np.linalg.norm(frames[i + 1] - frames[i]) > 1e-6]
+        for a_i, i in enumerate(real):
+            a, b = frames[i], frames[i + 1]
+            count = max(int(np.linalg.norm(b - a) / spacing) + 1, 2)
+            pts = np.array([a + s * (b - a) for s in np.linspace(0.25, 0.75, count)]) # MIDDLE HALF OF THE LINK, AWAY FROM ITS JOINTS
+            for j in real[a_i + 2:]: # EVERY REAL LINK AT LEAST TWO ALONG
+                e = ellipsoids[j]
+                diff = pts - e['center']
+                if np.any(np.einsum('ij,jk,ik->i', diff, np.linalg.inv(e['matrix']), diff) <= 1.0):
+                    return True
+        return False
+
     # ---- THE DISPLAY (NEW) ----------------------------------------------
     # DRAWS EACH ELLIPSOID IN SWIFT SO YOU CAN SEE THEM. THE RADII NEVER CHANGE (LINK LENGTHS ARE FIXED), ONLY THE
     # CENTRE AND ROTATION, SO EACH STEP ONLY HAS TO MOVE THE MESHES.
