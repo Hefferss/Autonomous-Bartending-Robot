@@ -5,11 +5,11 @@
 import numpy as np
 
 
-# SPHERE POINTS: POINTS SPREAD EVENLY OVER A SPHERE (FIBONACCI SPIRAL). USED FOR THE OBSTACLE DROPPED INTO A PATH
+# sphere points: points spread evenly over a sphere (fibonacci spiral). used for the obstacle dropped into a path
 def sphere_points(centre, radius, count=200):
-    k = np.arange(count) + 0.5                                       # ONE INDEX PER POINT
-    phi = np.arccos(1 - 2 * k / count)                               # ANGLE DOWN FROM THE TOP
-    theta = np.pi * (1 + 5 ** 0.5) * k                               # GOLDEN-ANGLE SPIRAL AROUND
+    k = np.arange(count) + 0.5                                       # one index per point
+    phi = np.arccos(1 - 2 * k / count)                               # angle down from the top
+    theta = np.pi * (1 + 5 ** 0.5) * k                               # golden-angle spiral around
     unit = np.column_stack((np.cos(theta) * np.sin(phi), np.sin(theta) * np.sin(phi), np.cos(phi)))
     return unit * radius + np.array(centre, dtype=float)
 
@@ -21,11 +21,11 @@ class CollisionChecker:
         self.robot = robot
         self.fatness = fatness
 
-    def elipsoids_for_robot_around_links(self, q): #will be called every time j traj runs for this robot. Idea here is to make an elipsoid for each link and then use this to attach them to Q's to check for collisions.
+    def elipsoids_for_robot_around_links(self, q): #will be called every time j traj runs for this robot. idea here is to make an elipsoid for each link and then use this to attach them to q's to check for collisions.
         Joint_Pos_Rotation = [T.A for T in self.robot.fkine_all(q)] #same way as in lab 6 q2. gets a 4x4 matrix for each joint so we can work out positoin adn rotation. get_transforms from lab 6.
         Ellipsoid_all = [] # makes an empty array for the elipsoids to be added to. same idea as week 6 q2.
         
-        # RESTRICT TO robot.n LINKS TO IGNORE EXTRA TOOL OR EE FRAMES
+        # restrict to robot.n links to ignore extra tool or EE frames
         num_links = min(len(Joint_Pos_Rotation) - 1, self.robot.n)
         for i in range(num_links): #for each link (between joint i and i+1):
                 Elipsoid_vector = Joint_Pos_Rotation[i+1][:3,3] - Joint_Pos_Rotation[i][:3,3] #arrow from this joint to the next, along the link.
@@ -33,12 +33,12 @@ class CollisionChecker:
                 if np.linalg.norm(Elipsoid_width) == 0: #link 5 has no length, so the width is zero. make it a flat direction instead of zero.
                     Elipsoid_width = np.array([1, 0, 0]) #any flat direction is sideways to a vertical link
                 Elipsoid_height = np.cross(Elipsoid_vector, Elipsoid_width) #up and down from the link
-                Elipsoid_centre = (Joint_Pos_Rotation[i+1][:3,3] + Joint_Pos_Rotation[i][:3,3])/2 #middle of the link, where the elipsoid sits. halfway between the two joints. Lab 6 2.5
+                Elipsoid_centre = (Joint_Pos_Rotation[i+1][:3,3] + Joint_Pos_Rotation[i][:3,3])/2 #middle of the link, where the elipsoid sits. halfway between the two joints. lab 6 2.5
 
                 if np.linalg.norm(Elipsoid_vector) != 0:
                     Elipsoid_direction = Elipsoid_vector / np.linalg.norm(Elipsoid_vector) #along the link, length 1
                 else:
-                    Elipsoid_direction = Elipsoid_vector #link with no length, leave it as zeros. This is for link 5, because it doesnt have a length. just a direction.
+                    Elipsoid_direction = Elipsoid_vector #link with no length, leave it as zeros. this is for link 5, because it doesnt have a length. just a direction.
                 if np.linalg.norm(Elipsoid_width) != 0:
                     Elipsoid_width = Elipsoid_width / np.linalg.norm(Elipsoid_width)
                 if np.linalg.norm(Elipsoid_height) != 0:
@@ -49,7 +49,7 @@ class CollisionChecker:
                 radii = np.array([np.linalg.norm(Elipsoid_vector/2), self.fatness, self.fatness]) #half the link long, fatness wide
                 Elipsoid_size = np.diag(np.square(radii)) #radii squared on the diagonal. lab 6 2.1
                 Elipsoid_size_rotation = Elipsoid_rotation_matrix @ Elipsoid_size @ Elipsoid_rotation_matrix.T #size and direction packed into one 3x3. lab 6 2.7
-                # A LINK WITH NO LENGTH GIVES A FLAT MATRIX THAT CAN'T BE INVERTED, SO MAKE THOSE A SPHERE OF RADIUS fatness
+                # a link with no length gives a flat matrix that can't be inverted, so make those a sphere of radius fatness
                 if np.linalg.norm(Elipsoid_vector) < 1e-9:
                     Elipsoid_size_rotation = np.eye(3) * self.fatness ** 2
                     radii = np.array([self.fatness, self.fatness, self.fatness])
@@ -64,36 +64,36 @@ class CollisionChecker:
         return Ellipsoid_all #give the list back once every link is done. updates it to Ellispod_all every time jtraj runs.
 
 
-    # COLLIDES: TRUE IF ANY OBSTACLE POINT (N x 3) IS INSIDE ANY LINK ELLIPSOID OF THE ROBOT AT q
+    # collides: true if any obstacle point (n x 3) is inside any link ellipsoid of the robot at q
     def collides(self, q, points):
         points = np.atleast_2d(np.asarray(points, dtype=float))
         for e in self.elipsoids_for_robot_around_links(q):
-            diff = points - e['center'] # EVERY POINT RELATIVE TO THE ELLIPSOID CENTRE
-            distance = np.einsum('ij,jk,ik->i', diff, np.linalg.inv(e['matrix']), diff) # (p - c)^T A^-1 (p - c) FOR ALL POINTS AT ONCE
+            diff = points - e['center'] # every point relative to the ellipsoid centre
+            distance = np.einsum('ij,jk,ik->i', diff, np.linalg.inv(e['matrix']), diff) # (p - c)^T A^-1 (p - c) for all points at once
             if np.any(distance <= 1.0):
                 return True
         return False
 
-    # LOOK AHEAD: INDEX OF THE FIRST STEP OF A PLANNED PATH (E.G. jtraj(...).q) THAT HITS, OR None IF IT'S ALL CLEAR
+    # look ahead: index of the first step of a planned path (e.g. jtraj(...).q) that hits, or none if it's all clear
     def first_collision_in_path(self, q_path, points):
-        for step, q in enumerate(q_path):                            # EVERY STEP OF THE PATH
+        for step, q in enumerate(q_path):                            # every step of the path
             if self.collides(q, points):
                 return step
         return None
 
-    # LINK POINTS: POINTS ALONG EVERY LINK OF THIS ROBOT, USED AS THE OBSTACLE FOR THE OTHER ROBOTS' CHECKERS
+    # link points: points along every link of this robot, used as the obstacle for the other robots' checkers
     def link_points(self, q, spacing=0.05):
-        frames = [T.A for T in self.robot.fkine_all(q)]              # SAME FRAMES AS ABOVE
+        frames = [T.A for T in self.robot.fkine_all(q)]              # same frames as above
         pts = []
         num_links = min(len(frames) - 1, self.robot.n)
         for i in range(num_links):
-            a, b = frames[i][:3, 3], frames[i + 1][:3, 3]            # THE TWO JOINTS OF THIS LINK
-            count = max(int(np.linalg.norm(b - a) / spacing) + 1, 2) # HOW MANY POINTS ALONG IT
+            a, b = frames[i][:3, 3], frames[i + 1][:3, 3]            # the two joints of this link
+            count = max(int(np.linalg.norm(b - a) / spacing) + 1, 2) # how many points along it
             for s in np.linspace(0, 1, count):
                 pts.append(a + s * (b - a))
         return np.array(pts)
 
-    # SELF HIT: TRUE IF A LINK GOES THROUGH A NON-NEIGHBOURING LINK OF THE SAME ROBOT (NEIGHBOURS ALWAYS TOUCH AT THEIR JOINT)
+    # self hit: true if a link goes through a non-neighbouring link of the same robot (neighbours always touch at their joint)
     def self_hit(self, q, spacing=0.03):
         frames = [T.A[:3, 3] for T in self.robot.fkine_all(q)]
         ellipsoids = self.elipsoids_for_robot_around_links(q)
@@ -101,8 +101,8 @@ class CollisionChecker:
         for a_i, i in enumerate(real):
             a, b = frames[i], frames[i + 1]
             count = max(int(np.linalg.norm(b - a) / spacing) + 1, 2)
-            pts = np.array([a + s * (b - a) for s in np.linspace(0.25, 0.75, count)]) # MIDDLE HALF OF THE LINK, AWAY FROM ITS JOINTS
-            for j in real[a_i + 2:]: # EVERY REAL LINK AT LEAST TWO ALONG
+            pts = np.array([a + s * (b - a) for s in np.linspace(0.25, 0.75, count)]) # middle half of the link, away from its joints
+            for j in real[a_i + 2:]: # every real link at least two along
                 e = ellipsoids[j]
                 diff = pts - e['center']
                 if np.any(np.einsum('ij,jk,ik->i', diff, np.linalg.inv(e['matrix']), diff) <= 1.0):

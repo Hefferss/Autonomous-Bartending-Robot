@@ -44,3 +44,27 @@ class StaubliTX60:
         self.meshes = []
         for file in mesh_files:
             self.meshes.append(Mesh(filename=os.path.join(mesh_folder, file), color="#6e6e6e"))
+
+#Guide for stuff for my robot
+
+# Q = 0 homing and the joint limits, and the DH parameters are above. (lines 17-22 and 24 for DH, lines 15,16,18,19 and 25 for qlim shift and home_q respectively)
+
+#fkine/fkine_all/basein mainV2 as well as in movement commands, OO_MovementCommands.py 98 for the fkine of the meshes, 87 and 102 for teh fkine used for hold and 151 and 152 for the table
+
+# grab / release: OO_MovementCommands.py grab line 86 (stores item pose relative to the gripper), release line 92
+
+#Mesh offsets are applied in DH in line 34 and updated in OO_MovementCommands.py lines 97 to 100, 
+
+#Singularity/ manipulatbility stuff. OO_MovementCommands.py gives the jacobian and 324 to 330 has manipuability and the damping. 
+
+#Ikine mostly in movement commands, 163 for solve, 170 for ikine_LM, 193 for move_to_pose, which has solve ikine in it, and mainv2, in which lnes 137 and 139 use IK to move jack_part
+
+#jtraj in 117, 118 of movment commands (move_to_q)   , used again in 153 for my move to home
+
+# RMRC, MovementCOmmands has the 285 move_RMRC, 300 for trapezoid, 325 for the jacobian and t245 has the rmrc_to wrap. Main V2 has the 141 lid down, 144 lift, 146 shake, 149 carry to james and the 150,152 down and up movements, all of which use the RMRC to move the robot.
+
+#Collision has OO_MovementCommands.py for check_collisoin (134), and above_table(150), as well as 205 replan for move_to_pose. OO_Collisoin as the elipsoids on 24, collides on 68, 85 for the link_points and 97 for the self_hit. Line 83 of movement commands adds in the collisoin for ma robot. 
+
+#Grab and hand off has OO_MovementCommands.py with grab (line86) and release (line 92). MainV2 has 142 for the grab and 151 for the release.
+
+#GUI, 120 is the joint slider, and 151 is the jog, and movemenet commands as teh jog functoin itself, in line 355.
