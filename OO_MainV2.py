@@ -1,6 +1,6 @@
 from spatialmath import SE3
 from spatialmath.base import transl #needed to place the robots
-from OO_MovementCommands import Workcell, TABLE_HEIGHT
+from OO_MovementCommands import Workcell
 from OO_GUI import RobotGUI
 from OO_WillRobotTest import KawasakiRS007N
 from OO_JamesRobotTest import ABBIRB140
@@ -8,7 +8,6 @@ from OO_JackRobotTest import StaubliTX60 #jacks robot
 from OO_UR3 import UR3Robot #ur3 on its platform
 from OO_Scene_Objects import BarScene #tables, rail, bottles and all that
 from math import pi # the constant pi
-import numpy as np # for the pour direction
 
 # MOVED HERE FROM OO_Robot_Movements.py. THE CODE IS THE SAME, IT ONLY USES THE FUNCTIONS FROM OO_MovementCommands.py
 # (move_to_pose, move_to_q, pick_drop, tuck, grab, release) AND THE UR3 RAIL'S move_base
@@ -43,19 +42,17 @@ LID_ON_SHAKER = 0.477 # top of the lid once it's on the shaker
 # INGREDIENTS WILL POURS INTO THE SHAKER. GRAB = TOP OF THE ITEM ON THE STORAGE TABLE
 COGNAC_GRAB = (0.3, -0.097, 0.503) # cognac STL origin is off centre, its middle is at y -0.097. 0.256 tall
 COINTREAU_GRAB = (0.3, -0.2, 0.409) # 0.159 tall
-LEMON_GRAB = (0.215, -0.2, 0.265) # top of the half lemon on the table
 SHAKER_GRAB_OFFSET = SHAKER_START.t[0] - SHAKER_STORAGE[0] # shaker is grabbed by its edge, its centre is this far +x of the grab point
-LEMON_DROP_ZONE = (0.85, 0.55) # UR3 leaves the lemon and the Cointreau here (Will can't reach low enough at WILL_DROP_ZONE for them)
+LEMON_DROP_ZONE = (0.85, 0.55) # UR3 leaves the Cointreau here (Will can't reach low enough at WILL_DROP_ZONE for it)
 UR3_WAIT_X = -0.3 # where the UR3 waits on the rail while Will works (clear of his pours at x 0.5)
 SHAKER_POUR_SPOT = (WILL_SHAKER_SPOT[0] + SHAKER_GRAB_OFFSET, WILL_SHAKER_SPOT[1], SHAKER_TOP) # top centre of the shaker on Will's spot
 
-# UR3 BRINGS ONE INGREDIENT TO WILL, WILL GRABS IT LOW BY ITS SIDE AND POURS IT INTO THE SHAKER, UR3 PUTS IT BACK
-#   length = HOW TALL IT IS, radius = HOW FAT, grip = HOW HIGH UP FROM ITS BASE WILL HOLDS IT
-def will_pours(workcell, ur3_setup, item, grab, length, radius, grip, pour_deg, drop_xy): # pour_deg: which way his gripper points while pouring, drop_xy: where the UR3 leaves it for Will
+# UR3 BRINGS ONE BOTTLE TO WILL, WILL GRABS IT BY THE NECK AND POURS IT INTO THE SHAKER, UR3 PUTS IT BACK
+#   length = HOW TALL IT IS, drop_xy = WHERE THE UR3 LEAVES IT FOR WILL
+def will_pours(workcell, ur3_setup, item, grab, length, drop_xy):
     ur3 = workcell.movers["UR3"]
     will = workcell.movers["Will's Robot"]
     drop = (*drop_xy, grab[2]) # UR3 holds it by the top. same height as on the storage table (both tables are 0.25 high)
-    will_grip = None if grip is None else (*drop_xy, TABLE_HEIGHT + grip) # Will holds it by the side, low down
 
     ur3_setup.move_base(ur3, grab[0]) # UR3 fetches it
     ur3.pick_drop(grab, item)
@@ -65,12 +62,7 @@ def will_pours(workcell, ur3_setup, item, grab, length, radius, grip, pour_deg, 
     ur3.tuck()
     ur3_setup.move_base(ur3, UR3_WAIT_X) # backs off along the rail so it's not in Will's way
 
-    if grip is None: # BOTTLE: WILL HOLDS IT BY THE NECK (A LOW SIDE GRAB FOLDS HIS ARM THROUGH ITSELF)
-        will.neck_pour(drop, item, SHAKER_POUR_SPOT, length)
-    else: # LEMON: SIDE GRAB, LOW DOWN
-        will.side_pick_drop(will_grip, radius, item) # Will grabs it by the side
-        will.pour(SHAKER_POUR_SPOT, radius, length - grip, direction=(np.cos(np.radians(pour_deg)), np.sin(np.radians(pour_deg)))) # rolls his wrist to pour it in
-        will.side_pick_drop(will_grip, radius) # puts it back in his drop zone
+    will.neck_pour(drop, item, SHAKER_POUR_SPOT, length) # WILL HOLDS IT BY THE NECK (A LOW SIDE GRAB FOLDS HIS ARM THROUGH ITSELF)
     will.move_to_q(will.home_q) # out of the way
 
     ur3_setup.move_base(ur3, drop_xy[0])
@@ -85,7 +77,6 @@ def will_pours(workcell, ur3_setup, item, grab, length, radius, grip, pour_deg, 
 def will_part(workcell, scene, ur3_setup):
     ur3 = workcell.movers["UR3"] # robots from the workcell
     will = workcell.movers["Will's Robot"]
-    jam = workcell.movers["James' Robot"]
     jack = workcell.movers["Jack's Robot"]
     shaker = scene.cocktail_shaker_scene
     lid = scene.cocktail_shaker_lid_scene
@@ -103,7 +94,7 @@ def will_part(workcell, scene, ur3_setup):
 
     ur3_setup.move_base(ur3, SHAKER_STORAGE[0]) # slide to the shaker
     ur3.pick_drop(SHAKER_STORAGE, shaker) # grab it
-    ur3.tuck(0.4) # UR3 pulls back over the rail so it's out of the way. tuck takes a y number, not an SE3
+    ur3.tuck() # UR3 pulls back over the rail so it's out of the way
     ur3_setup.move_base(ur3, WILL_DROP_ZONE[0]) # slide over to Will
     ur3.pick_drop((*WILL_DROP_ZONE, SHAKER_TOP)) # put it in his drop off zone
     ur3.tuck() # get out of the way before Will reaches in
@@ -112,13 +103,12 @@ def will_part(workcell, scene, ur3_setup):
     will.move_to_q(will.home_q) # Will stands back up
     will.move_to_q((0.8, pi/2, -pi/2, 0.5, 7, 3)) # Will stands back up
 
-    # WILL POURS THE INGREDIENTS INTO THE SHAKER: (ITEM, UR3 GRAB SPOT, HEIGHT, RADIUS, HOW HIGH WILL HOLDS IT (None = BY THE NECK), POUR DIRECTION DEG, DROP SPOT)
-    for item, grab, length, radius, grip, pour_deg, drop_xy in [(scene.cognac_scene, COGNAC_GRAB, 0.256, 0.049, None, None, WILL_DROP_ZONE),
-                                                                (scene.cointreau_scene, COINTREAU_GRAB, 0.159, 0.033, None, None, LEMON_DROP_ZONE)]:
-                                                                # (scene.Better_lemon_scene, LEMON_GRAB, 0.03, 0.015, 0.015, 90, LEMON_DROP_ZONE)   # LEMON OFF FOR NOW: TOO LOW FOR WILL WITHOUT HIS ARM GOING THROUGH ITSELF
+    # WILL POURS THE INGREDIENTS INTO THE SHAKER: (ITEM, UR3 GRAB SPOT, HEIGHT, DROP SPOT). LEMON IS OFF: TOO LOW FOR WILL WITHOUT HIS ARM GOING THROUGH ITSELF
+    for item, grab, length, drop_xy in [(scene.cognac_scene, COGNAC_GRAB, 0.256, WILL_DROP_ZONE),
+                                        (scene.cointreau_scene, COINTREAU_GRAB, 0.159, LEMON_DROP_ZONE)]:
         if workcell.state != "RUNNING": # E-STOP: SKIP THE REST
             return
-        will_pours(workcell, ur3_setup, item, grab, length, radius, grip, pour_deg, drop_xy)
+        will_pours(workcell, ur3_setup, item, grab, length, drop_xy)
 
     # Will passes the shaker to Jack: RMRC up and down, one short joint move across in the same arm shape
     will.carry((*WILL_SHAKER_SPOT, SHAKER_TOP), (*JACK_DROP_ZONE, SHAKER_TOP), shaker) # HAND OFF: THE SHAKER IS NOW DOWN FOR JACK
@@ -150,8 +140,7 @@ def jack_part(workcell, scene, ur3_setup):
     # RMRC: LOWER THE LID STRAIGHT DOWN ONTO THE SHAKER
     jack.move_to_pose(SE3(*JACK_DROP_LID, LID_ON_SHAKER + 0.1) * SE3.Rx(pi)) # NORMAL MOVE TO 10 CM ABOVE THE SHAKER (PATH DOESN'T MATTER HERE)
     T_lid_on = SE3(*JACK_DROP_LID, LID_ON_SHAKER) * SE3.Rx(pi) # WHERE THE HAND ENDS UP WHEN THE LID IS ON
-    if not jack.move_rmrc(T_lid_on, duration=2.0, steps=40): # STRAIGHT LINE DOWN, EXISTING RMRC CODE
-        jack.move_to_pose(T_lid_on) # IF RMRC FAILED (SINGULARITY, OUT OF REACH), FALL BACK TO THE NORMAL MOVE
+    jack.rmrc_to(T_lid_on, duration=2.0, steps=40) # RMRC STRAIGHT DOWN (NORMAL MOVE IF RMRC FAILS)
     jack.grab(shaker)
     T_shake = SE3(*JACK_DROP_ZONE, 0.8) * SE3.Rx(pi) # SHAKE HEIGHT, ABOVE THE DROP ZONE
     jack.rmrc_to(T_shake, duration=2.0, steps=40) # RMRC STRAIGHT UP WITH THE SHAKER
@@ -200,10 +189,8 @@ def james_part(workcell, scene, ur3_setup):
     T_pour = SE3(*JAMES_GLASS_SPOT, JAMES_POUR_HEIGHT) * SE3.Rx(pi) # rim over the glass, shaker upright
     jam.move_to_pose(T_pour)
     jam.rmrc_to(T_pour * SE3.Ry(JAMES_TILT), orientation_weight=1.0, duration=2.0, steps=40) # RMRC TIP: HAND STAYS PUT, SHAKER TIPS INTO THE GLASS
-    for i in range(20): # POURING. workcell.step SO THE E-STOP STILL WORKS
-        if workcell.state != "RUNNING":
-            return
-        workcell.step(0.05)
+    if not jam.wait(): # POURING
+        return
     jam.rmrc_to(T_pour, orientation_weight=1.0, duration=2.0, steps=40) # TIP BACK UP
     jam.pick_drop(shaker_rim) # shaker back where it was
     jam.move_to_q(jam.home_q)
@@ -271,7 +258,7 @@ if __name__ == "__main__":
     workcell.add_robot("Will's Robot", KawasakiRS007N(base=transl(1, 0.75, 0.25))) # add the Kawasaki under a name
     workcell.launch() # open Swift and show every robot
     scene = BarScene(workcell.env) # adds all the objects. has to be after launch
-    start_poses = save_start_poses(scene)          # NEW: SAVE WHERE EVERYTHING STARTS
+    start_poses = save_start_poses(scene) # SAVE WHERE EVERYTHING STARTS
     workcell.collision_on = True #every robot checks the other robots before each step (False to turn off)
 
     # SCENE BUTTONS: LABEL -> FUNCTION. TO ADD ONE:
@@ -283,7 +270,7 @@ if __name__ == "__main__":
         "Will's Robot": lambda: will_part(workcell, scene, ur3),
         "Jack's Robot": lambda: jack_part(workcell, scene, ur3),
         "James' Robot": lambda: james_part(workcell, scene, ur3),
-        "Reset Scene": lambda: reset_scene(workcell, ur3, start_poses),   # NEW. NAME MUST MATCH THE GUI BUTTON
+        "Reset Scene": lambda: reset_scene(workcell, ur3, start_poses),
     }
     gui = RobotGUI(workcell, scenes=scenes) # button label -> scene
     gui.build() # add the buttons, dropdown and sliders

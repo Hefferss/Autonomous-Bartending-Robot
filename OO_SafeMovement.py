@@ -1,28 +1,16 @@
-# ======================================================================
-# OO_SafeMovement.py  --  collision-aware movement for ANY robot (including the UR3)
-#
-# EVERY COMMENT IN THIS FILE IS NEW (ADDED BY CLAUDE), SO THEY ARE ALL IN CAPITALS TO MATCH THE CONVENTION.
-#
-# THIS FILE SITS ON TOP OF OO_Collision.py AND OO_MovementCommands.py WITHOUT CHANGING EITHER, SO IT CANNOT CLASH WITH
-# ANYONE ELSE'S EDITS TO THOSE FILES. IT HAS THREE CLASSES:
+
 #   ObstacleWorld    - THE LIST OF THINGS THE ROBOTS MUST NOT HIT (AND OPTIONALLY THE OTHER ROBOTS)
 #   PlacedObstacle   - AN OBSTACLE YOU CAN DROP INTO THE SCENE ON DEMAND: A RED SPHERE YOU CAN SEE, PLUS THE POINTS THE CHECKER USES
 #   SafeMover        - WRAPS ONE ROBOT'S RobotMover. MOVES LIKE move_to_q / move_to_pose, BUT CHECKS FOR COLLISIONS FIRST
 #                      (LOOK-AHEAD), CHECKS AGAIN BEFORE EVERY STEP (IN CASE SOMETHING IS PLACED MID-MOVE), AND CAN
 #                      RE-PLAN AROUND A BLOCKED PATH
-# ======================================================================
-
-# ---------------------------- IMPORTS ---------------------------------
 import numpy as np                                       # ARRAYS AND MATHS
-from math import pi                                      # THE CONSTANT PI
 from roboticstoolbox import jtraj                        # SMOOTH JOINT PATH, SAME AS move_to_q USES
 from spatialgeometry import Sphere                       # THE VISIBLE OBSTACLE
 from spatialmath import SE3                              # POSES
 from spatialmath.base import transl                      # POSITION MATRIX
 from OO_Collision import CollisionChecker, sphere_points # THE ELLIPSOID CHECKER AND A POINT CLOUD FOR A SPHERE
 
-
-# ---------------------------- THE OBSTACLE WORLD ------------------------
 class ObstacleWorld:
 
     # CONSTRUCTOR: STARTS WITH NO OBSTACLES AND NO ROBOTS REGISTERED
@@ -51,8 +39,6 @@ class ObstacleWorld:
                     parts.append(checker.link_points(other.robot.q))
         return np.vstack(parts) if parts else np.empty((0, 3))
 
-
-# ---------------------------- A DROPPABLE OBSTACLE ------------------------
 class PlacedObstacle:
     PARK = (1000.0, 1000.0, -1000.0)                     # WHERE IT WAITS WHEN HIDDEN (TOO FAR AWAY TO SEE)
 
@@ -82,20 +68,18 @@ class PlacedObstacle:
         self.placed = False
 
 
-# ---------------------------- THE SAFE MOVER ------------------------------
 class SafeMover:
 
     # CONSTRUCTOR
     #   mover: THE ROBOT'S RobotMover (FROM workcell.movers[...])     world: THE ObstacleWorld
-    #   fatness, length_margin, link_offsets: PASSED STRAIGHT TO THE CollisionChecker (SEE OO_Collision.py)
+    #   fatness: HOW THICK THE LINK ELLIPSOIDS ARE, PASSED TO THE CollisionChecker (SEE OO_Collision.py)
     #   check_robots: True ALSO AVOIDS THE OTHER REGISTERED ROBOTS. OFF BY DEFAULT BECAUSE ROBOTS HANDING OVER AN ITEM
     #                 ARE CLOSE TOGETHER ON PURPOSE
     #   name: THE ROBOT'S NAME, USED WHEN REGISTERING IT IN THE WORLD
-    def __init__(self, mover, world, fatness=0.1, length_margin=1.0, link_offsets=None,
-                 check_robots=False, name=None):
+    def __init__(self, mover, world, fatness=0.1, check_robots=False, name=None):
         self.mover = mover
         self.world = world
-        self.checker = CollisionChecker(mover.robot, fatness, length_margin, link_offsets)
+        self.checker = CollisionChecker(mover.robot, fatness)
         self.check_robots = check_robots
         self.last_result = None                          # "reached", "blocked ahead", "hit mid-move", "e-stop" OR "no clear path"
         world.register_robot(name or ("robot %d" % len(world.robots)), mover, self.checker)
@@ -138,7 +122,6 @@ class SafeMover:
                 return False
             mover.robot.q = q_step                                   # SET THE ROBOT TO THIS STEP
             mover.update_meshes(q_step)                              # MOVE THE MESHES
-            self.checker.update_display(q_step)                      # MOVE THE COLLISION ELLIPSOIDS (IF SHOWN)
             workcell.step()                                          # CHECK INPUTS, UPDATE SWIFT
         self.last_result = "reached"
         return True

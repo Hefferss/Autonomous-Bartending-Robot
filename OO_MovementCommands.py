@@ -310,46 +310,20 @@ class RobotMover:
             self.workcell.step(0.05)
         return self.rmrc_to(T_up, orientation_weight=1.0, duration=2.0, steps=40) # ROLL BACK UPRIGHT
 
-    # MOVE RMRC (NEW)
-    # RESOLVED MOTION RATE CONTROL, FOLLOWING THE LAB 9 SOLUTION (QUESTION 1). THE STEP NUMBERS BELOW MATCH THE LAB.
-    # MOVES THE HAND IN A STRAIGHT LINE FROM WHERE IT IS NOW TO T_TARGET.
-    # EVERY SMALL STEP IT:
-    #   - WORKS OUT THE VELOCITY NEEDED TO REACH THE NEXT POINT ON THE LINE (FEEDBACK, SO DRIFT IS CORRECTED)
-    #   - WEIGHTS THAT VELOCITY WITH W SO POSITION MATTERS MORE THAN ORIENTATION
-    #   - USES THE JACOBIAN TO TURN IT INTO JOINT VELOCITIES (DAMPED LEAST SQUARES NEAR A SINGULARITY)
-    #   - STOPS ANY JOINT THAT WOULD GO PAST ITS LIMIT, THEN MOVES THE JOINTS A SMALL STEP
-    # WHAT IS DIFFERENT FROM THE LAB, AND WHY:
-    #   - THE LAB COMPUTES EVERY STEP FIRST AND PLAYS IT AFTERWARDS. THIS PLAYS EACH STEP AS IT IS CALCULATED
-    #     (SAME MATHS) SO THE E-STOP CAN INTERRUPT IT.
-    #   - EPSILON IS SCALED BY THE ROBOT'S SIZE. THE LAB USES 0.1, WHICH SUITS THE PUMA 560. THE MANIPULABILITY
-    #     VALUE GETS SMALLER FOR SMALLER ROBOTS, SO THE SAME 0.1 WOULD DAMP A UR3 ALL THE TIME.
-    #   - THE LAB'S ORIENTATION STAYS FIXED. HERE THE ORIENTATION TURNS SMOOTHLY FROM THE START POSE TO THE TARGET POSE.
-    #   - IT CHECKS THE HAND ARRIVED AND RETURNS TRUE OR FALSE (THE LAB JUST PLOTS).
-    #   - NO PLOTTING: THE LAB'S RESULT ARRAYS ARE NOT SAVED ANY MORE, ONLY THE ARRAYS THE MOVEMENT NEEDS ARE KEPT.
-    # ARGUMENTS:
-    #   DURATION: SECONDS THE MOVE TAKES IN THE MATHS (THE LAB'S t)
-    #   STEPS: HOW MANY STEPS THE MOVE IS SPLIT INTO
-    #   TOLERANCE: HOW CLOSE (METRES) THE HAND MUST FINISH TO COUNT AS SUCCESS
-    #   EPSILON: MANIPULABILITY BELOW THIS MEANS "NEAR A SINGULARITY". None = THE LAB'S 0.1 SCALED TO THIS ROBOT
-    #   ORIENTATION_WEIGHT: THE 0.1 IN THE LAB'S W MATRIX. RAISE IT TO 1 IF THE FINAL ORIENTATION MATTERS MORE
-    #   MAX_JOINT_STEP: OPTIONAL SAFE-SPEED LIMIT (RADIANS PER STEP). None = OFF, AS IN THE LAB
-    #   MAX_DAMPING: THE 0.05 IN THE LAB'S DAMPING FORMULA. LOWER = MORE ACCURATE TRACKING, BUT LESS PROTECTION NEAR A SINGULARITY
-    # RETURNS TRUE IF IT REACHED THE TARGET. RETURNS FALSE IF THE E-STOP STOPPED IT, OR IF IT FINISHED TOO FAR AWAY
-    # (TARGET OUT OF REACH, OR BLOCKED BY A SINGULARITY OR JOINT LIMIT).
-    def move_rmrc(self, T_target, duration=3.0, steps=60, tolerance=0.005,
-                  epsilon=None, orientation_weight=0.1, max_joint_step=None, max_damping=0.05):
-        robot = self.robot # SHORT NAME FOR THE ROBOT
-        n = robot.n # NUMBER OF JOINTS
+    # MOVE RMRC: lab 9 Q1 RMRC, straight line from where the hand is now to T_target. step numbers match the lab
+    # differences from the lab:
+    #   - each step is played as it's calculated, so the e-stop and collision check can stop it mid-line
+    #   - epsilon is the lab's 0.1 scaled by robot size (manipulability shrinks with size cubed), so small robots aren't always damped
+    #   - orientation turns smoothly from the start pose to the target instead of staying fixed
+    #   - returns True if the hand finished within 5 mm of the target, False if e-stopped, blocked or out of reach
+    # orientation_weight: the 0.1 in the lab's W matrix. 1.0 when the final orientation matters (pouring, tipping)
+    def move_rmrc(self, T_target, duration=3.0, steps=60, orientation_weight=0.1):
+        robot = self.robot
+        n = robot.n
 
         # 1.1) SET PARAMETERS FOR THE SIMULATION
         delta_t = duration / (steps - 1) # DISCRETE TIME STEP (S)
-        if epsilon is None: # NO EPSILON GIVEN?
-            PUMA_REACH = 1.706 # THE REACH (AS ROBOTICS TOOLBOX MEASURES IT) OF THE LAB'S PUMA 560
-            try:
-                size = (robot.reach / PUMA_REACH) ** 3 # MANIPULABILITY GROWS WITH SIZE CUBED
-            except Exception: # THIS ROBOT HAS NO REACH VALUE
-                size = 1.0 # SO USE THE LAB'S VALUE AS IT IS
-            epsilon = 0.1 * size # THE LAB'S 0.1, SCALED TO THIS ROBOT
+        epsilon = 0.1 * (robot.reach / 1.706) ** 3 # LAB'S 0.1, SCALED FROM THE PUMA 560'S REACH (1.706 M) TO THIS ROBOT
         W = np.diag([1, 1, 1, orientation_weight, orientation_weight, orientation_weight]) # WEIGHTING MATRIX FOR THE VELOCITY VECTOR
 
         # 1.2) ALLOCATE ARRAY DATA
@@ -370,11 +344,10 @@ class RobotMover:
         # 1.4) TRACK THE TRAJECTORY WITH RMRC
         for i in range(steps - 1):
             if self.workcell.state != "RUNNING": # SAME E-STOP CHECK AS MOVE_TO_Q
-                print("RMRC motion aborted") # PRINT
-                return False # STOP IMMEDIATELY, DROP THE REST OF THE LINE
-            # (A COLLISION CHECK WOULD GO HERE, BEFORE THE ROBOT MOVES)
+                print("RMRC motion aborted")
+                return False
 
-            T = robot.fkine(q_matrix[i, :]).A # FORWARD TRANSFORMATION AT THE CURRENT JOINT STATE
+            T =robot.fkine(q_matrix[i, :]).A # FORWARD TRANSFORMATION AT THE CURRENT JOINT STATE
             delta_x = x[:, i + 1] - T[:3, 3] # POSITION ERROR FROM THE NEXT WAYPOINT
             Rd = R_want[i + 1] # THE NEXT ORIENTATION WANTED
             Ra = T[:3, :3] # CURRENT END-EFFECTOR ROTATION MATRIX
@@ -387,15 +360,11 @@ class RobotMover:
             J = robot.jacob0(q_matrix[i, :]) # JACOBIAN AT THE CURRENT JOINT STATE
             m = np.sqrt(np.linalg.det(J @ J.T)) # MANIPULABILITY: CLOSE TO 0 MEANS NEAR A SINGULARITY
             if m < epsilon: # IF MANIPULABILITY IS LESS THAN THE THRESHOLD
-                m_lambda = (1 - m / epsilon) * max_damping # DAMPING GROWS AS WE GET CLOSER TO THE SINGULARITY (LAB: 0.05)
+                m_lambda = (1 - m / epsilon) * 0.05 # DAMPING GROWS AS WE GET CLOSER TO THE SINGULARITY (LAB: 0.05)
             else:
                 m_lambda = 0
             inv_j = np.linalg.inv(J.T @ J + m_lambda * np.eye(n)) @ J.T # DAMPED LEAST SQUARES INVERSE
             qdot[i, :] = (inv_j @ xdot).T # SOLVE THE RMRC EQUATION
-            if max_joint_step is not None: # OPTIONAL SAFE-SPEED LIMIT (OFF BY DEFAULT, NOT IN THE LAB)
-                biggest = np.max(np.abs(qdot[i, :])) * delta_t
-                if biggest > max_joint_step:
-                    qdot[i, :] = qdot[i, :] * (max_joint_step / biggest)
             for j in range(n): # LOOP THROUGH THE JOINTS
                 if q_matrix[i, j] + delta_t * qdot[i, j] < qlim[j, 0]: # NEXT ANGLE BELOW THE LIMIT...
                     qdot[i, j] = 0 # STOP THE MOTOR
@@ -406,16 +375,16 @@ class RobotMover:
             if self.check_collision(q_matrix[i + 1, :]): # same table + robot check as move_to_q
                 print("UNSAFE: RMRC stopped, collision ahead")
                 return False
-            robot.q = q_matrix[i + 1, :] # THE LAB PLAYS THESE AT THE END. HERE EACH STEP IS PLAYED AS IT IS CALCULATED
-            self.update_meshes(robot.q) # MOVE THE MESHES TO MATCH
-            self.workcell.step() # CHECK INPUTS, UPDATE SWIFT
+            robot.q = q_matrix[i + 1, :] # PLAY THIS STEP NOW (THE LAB PLAYS THEM ALL AT THE END)
+            self.update_meshes(robot.q)
+            self.workcell.step()
 
         # DID THE HAND ACTUALLY ARRIVE? (NOT IN THE LAB)
         error = np.linalg.norm(robot.fkine(q_matrix[-1, :]).t - T_target.t) # DISTANCE LEFT TO THE TARGET (METRES)
-        if error > tolerance: # FINISHED TOO FAR AWAY?
+        if error > 0.005: # MORE THAN 5 MM OFF
             print("RMRC finished %.1f mm from the target (out of reach, near a singularity or at a joint limit)" % (error * 1000))
             return False
-        return True # REACHED THE TARGET
+        return True
 
     # Jog: nudges the end effector in x, y, z (GUI jog buttons)
     def jog(self, dx, dy, dz, steps=10):

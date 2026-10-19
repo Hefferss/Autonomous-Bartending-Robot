@@ -1,28 +1,14 @@
-# ======================================================================
-# OO_Controller.py  --  Xbox controller as an extra e-stop (Windows only)
-#
-#     X button  ->  EMERGENCY STOP
-#     B button  ->  BACK  (resets the e-stop)
-#     A button  ->  START (restarts the robot)
-#     Controller unplugged or switched off  ->  EMERGENCY STOP
-#
-# These call the SAME functions as the GUI buttons, so the safety rules
-# are the same: B only works after an e-stop, and A only works after B.
-#
-# Test the controller on its own:   python OO_Controller.py
-# ======================================================================
+# OO_Controller.py: xbox controller as an extra e-stop (windows only). X = e-stop, B = reset, A = restart, unplugged = e-stop
+# calls the same functions as the GUI buttons, so the same reset-then-restart rules apply. run this file on its own to test it
 
-# ---------------------------- IMPORTS ---------------------------------
-import ctypes                          # lets Python talk to the Windows controller library
-import time                            # used to check for a missing controller only once a second
+import ctypes
+import time
 
-# ---- the bit Windows uses for each button we care about -----------------
 A_BUTTON = 0x1000
 B_BUTTON = 0x2000
 X_BUTTON = 0x4000
 
 
-# ---- the box Windows fills in with the controller's state (don't edit) --------
 class XINPUT_GAMEPAD(ctypes.Structure):
     _fields_ = [("wButtons", ctypes.c_uint16), ("bLeftTrigger", ctypes.c_uint8),
                 ("bRightTrigger", ctypes.c_uint8), ("sThumbLX", ctypes.c_int16),
@@ -33,10 +19,8 @@ class XINPUT_STATE(ctypes.Structure):
     _fields_ = [("dwPacketNumber", ctypes.c_uint32), ("Gamepad", XINPUT_GAMEPAD)]
 
 
-# --------------------------- THE CONTROLLER CLASS -----------------------------
 class XboxController:
 
-    # ---- Constructor ----------------------------------------------------
     # Give it the three functions to run: for e-stop, back (reset) and start (restart).
     def __init__(self, on_estop, on_back, on_start):
         self.on_estop = on_estop              # runs when X is pressed
@@ -53,7 +37,6 @@ class XboxController:
             self.xinput = None
             print("Xbox controller: not available on this computer")
 
-    # ---- Read: asks Windows what the controller is doing ---------------
     # Returns (is_connected, buttons_held).
     def read(self):
         if self.xinput is None:                           # no library, so no controller
@@ -64,7 +47,6 @@ class XboxController:
             return False, 0
         return True, state.Gamepad.wButtons               # connected, and the buttons held
 
-    # ---- Poll: checks the controller once and carries on ---------------
     # Called automatically by Workcell.step() every animation step.
     def poll(self):
         # If no controller, only look again once a second (looking is slow).
@@ -86,8 +68,7 @@ class XboxController:
         b_now = bool(buttons & B_BUTTON)
         a_now = bool(buttons & A_BUTTON)
 
-        # Act only when a button goes from "not held" to "held", so holding
-        # a button down or letting go of it does nothing extra.
+        # only act when a button is first pressed, not while held or on release
         if x_now and not self.x_before:
             print("Xbox controller: X -> EMERGENCY STOP")
             self.on_estop()
@@ -104,7 +85,6 @@ class XboxController:
         self.a_before = a_now
 
 
-# ---- Test mode: python OO_Controller.py ---------------------------------------
 # Prints a message when you press X, B or A, so you can check the controller works.
 if __name__ == "__main__":
     test = XboxController(lambda: print("  (e-stop)"), lambda: print("  (back)"), lambda: print("  (start)"))
