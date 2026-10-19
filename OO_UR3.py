@@ -6,9 +6,18 @@ from spatialmath.base import transl
 from roboticstoolbox import models
 
 #toolbox UR3 ignores its base when it does ikine_LM so it aims at the wrong spot once its moved off the origin. this shifts the target into the robots own frame first
+#also: the toolbox UR3 has two end frames. it defaults to "ee_link", whose x axis points out of the flange, so aiming its z down left the tool pointing sideways.
+#"tool0" has z out of the flange (like every other robot here), so fkine, ikine and the jacobian all use tool0 and straight-down targets really are straight down
 class UR3BaseFix(models.UR3):
     def ikine_LM(self, target_pose, **extra_settings):
+        extra_settings.setdefault("end", "tool0")
         return super().ikine_LM(self.base.inv() * target_pose, **extra_settings) #adds all the GUI extra settings. will be updated depending on whatever WIll changes in the GUi code
+
+    def fkine(self, q, end=None, **extra_settings):
+        return super().fkine(q, end=end or "tool0", **extra_settings)
+
+    def jacob0(self, q, end=None, **extra_settings):
+        return super().jacob0(q, end=end or "tool0", **extra_settings)
 
 #same as UR3.py but class (object orientated):) the OO files need .robot .meshes .offsets .home_q
 class UR3Robot:
