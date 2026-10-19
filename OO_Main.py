@@ -15,18 +15,18 @@ from OO_GUI import RobotGUI                           # RobotGUI sets up the Swi
 # The GUI is held in its own file and the RobotGUI class builds the buttons and the sliders for swift. 
 from OO_Controller import XboxController              # Xbox controller e-stop
 # We add the xbox controller here so that we can specify which buttons do when controlling the robot
-from OO_WillRobotTest import KawasakiRS007N           # Imports the Kawasaki (Will's) robot class
+from OO_JamesRobotTest import ABBIRB140      # Imports the Kawasaki (Will's) robot class
 # The Robot class defines the DH parameters and mesh offsets for each robot in this case Will's Robot
 
 # Main Program
 if __name__ == "__main__":                           # This line ensures that the following code only runs when the file is run directly
     workcell = Workcell()                            # creates instance of the workcell class - 'workcell' now becomes the swift environment & allows us to use for example .add_robot suffixes to call functions
-    workcell.add_robot("Kawasaki RS007N", KawasakiRS007N())  # creates instance of the kawasaki robot using the movementcommands add_robot function. adds the kawasaki to the scene with the name in the quotations
+    workcell.add_robot("ABB IRB 140", ABBIRB140())  # creates instance of the kawasaki robot using the movementcommands add_robot function. adds the kawasaki to the scene with the name in the quotations
     workcell.launch()                                # Launch Swift with all the added robots
 
 
 
-    Movements = workcell.movers["Kawasaki RS007N"]                      # THE MOVER FOR THE ROBOT IN THE SCENE
+    Movements = workcell.movers["ABB IRB 140"]                      # THE MOVER FOR THE ROBOT IN THE SCENE
     Movements.move_to_q([0, pi/4, -3*pi/4, 0, pi/2, 0])                 # BENT READY POSE: ELBOW BENT, WRIST BENT (NOT SINGULAR). RMRC STARTS FROM HERE
     T_now = Movements.robot.fkine(Movements.robot.q)                    # WHERE THE HAND IS NOW
     T_target = SE3(0.05, 0, -0.1) * T_now                               # 5 CM FORWARD AND 10 CM DOWN FROM THERE, SO IT CAN'T BE OUT OF REACH
@@ -34,7 +34,7 @@ if __name__ == "__main__":                           # This line ensures that th
     print("RMRC reached target:", reached)
 
     
-    gui = RobotGUI(workcell, demo_targets={"Kawasaki RS007N": T_target})  # Takes the Swift env(workcell), & demo_target to create instance of the RobotGUI class
+    gui = RobotGUI(workcell, demo_targets={"ABB IRB 140": T_target})  # Takes the Swift env(workcell), & demo_target to create instance of the RobotGUI class
     # demo target takes the robot name that was specified when it was added and its target pose for testing. This is not a permanent setup but is required to make the demo button work in swift
     # To have multiple robots in the scene working with the GUI it would be required to have multiple in the dictionary
     gui.build()                                      # actually adds all the GUI buttons to Swift

@@ -2,8 +2,8 @@ import os
 from math import pi
 from spatialgeometry import Mesh
 from spatialmath import SE3
-from spatialmath.base import troty, trotz, transl
-from ir_support_extra_parts.parts import part_mesh #same A1 safety parts
+from spatialmath.base import troty, trotz
+from ir_support_extra_parts.parts import part_mesh #estop and safety man from A1
 
 #all the bar objects from MainRobotSimFile.py but class (object orientated):) each one is kept as self.something so the robots can grab them later
 class BarScene:
@@ -25,7 +25,7 @@ class BarScene:
         #lemonSlice.stl 
         lemon_location = os.path.join(item_folder, "Lemon.stl")
         self.lemon_scene = Mesh(filename=lemon_location, color="#F7F7A1")
-        self.lemon_scene.T = SE3(0.22, -0.2, 0.26) * troty(pi/2)
+        self.lemon_scene.T = SE3(0.22, -0.2, 0.255) * troty(pi/2) # lemon slice lying on the table (no pot)
         env.add(self.lemon_scene)
 
         #BarTableRobot.stl
@@ -49,7 +49,7 @@ class BarScene:
         #BetterLemon.stl
         Better_lemon_location = os.path.join(item_folder, "BetterLemon.stl")
         self.Better_lemon_scene = Mesh(filename=Better_lemon_location, color="#F7F7A1", scale=[0.001, 0.001, 0.001])
-        self.Better_lemon_scene.T = SE3(0.2, -0.2, 0.26) * troty(pi/2)
+        self.Better_lemon_scene.T = SE3(0.2, -0.2, 0.25) * troty(pi/2) # half lemon sitting on the table (no pot)
         env.add(self.Better_lemon_scene)
 
         #UR3 rail
@@ -82,37 +82,32 @@ class BarScene:
         self.Umbrella_scene.T = SE3(-0.2, -0.3, 0.255) * trotz(pi/2)
         env.add(self.Umbrella_scene)
 
-        #lemon pot
-        Lemon_pot_location = os.path.join(item_folder, "UmbrellaPot.stl")
-        self.Lemon_pot_scene = Mesh(filename=Lemon_pot_location, color="#504E4E", scale=[0.001, 0.001, 0.001])
-        self.Lemon_pot_scene.T = SE3(0.2, -0.2, 0.26)
-        env.add(self.Lemon_pot_scene)
 
-        #safety barriers (same as A1 but looped) - fence box x -2.25 to 3.75, y -1.25 to 1.75
-        self.safety_barriers = []
-        for x in [-1.5, 0, 1.5, 3.0]: #4x 1.5m barriers along the bar
-            barrier_back = part_mesh("barrier1.5x0.2x1m")
-            barrier_back.T = SE3(x, -1.25, 0) #behind the storage table
-            barrier_front = part_mesh("barrier1.5x0.2x1m")
-            barrier_front.T = SE3(x, 1.75, 0) #in front of the robot table (customer side)
-            self.safety_barriers += [barrier_back, barrier_front]
+        #cocktail shaker lid, STL is modelled sitting on the shaker so drop it 0.21 to sit on the table
+        cocktail_shaker_lid_location = os.path.join(item_folder, "CocktailShakerLid.stl")
+        self.cocktail_shaker_lid_scene = Mesh(filename=cocktail_shaker_lid_location, color="#504E4E", scale=[0.001, 0.001, 0.001])
+        self.cocktail_shaker_lid_scene.T = SE3(0.7, -0.25, 0.045)
+        env.add(self.cocktail_shaker_lid_scene)
 
-        for y in [-0.5, 1.0]: #2x 1.5m barriers on each end
-            barrier_left = part_mesh("barrier1.5x0.2x1m")
-            barrier_left.T = transl(-2.25, y, 0) @ trotz(-pi/2) #rail start end
-            barrier_right = part_mesh("barrier1.5x0.2x1m")
-            barrier_right.T = transl(3.75, y, 0) @ trotz(-pi/2) #sensors table end
-            self.safety_barriers += [barrier_left, barrier_right]
+        #safety tape (1m long pieces) - taped box from x -2 to 3, y -1 to 2
+        safety_tape_location = os.path.join(item_folder, "SafetyTape.stl")
+        tape_poses = [SE3(-2, -1, 0), SE3(-1, -1, 0), SE3(0, -1, 0), SE3(1, -1, 0), SE3(2, -1, 0),
+                      SE3(-2, 1.9, 0), SE3(-1, 1.9, 0), SE3(0, 1.9, 0), SE3(1, 1.9, 0), SE3(2, 1.9, 0),
+                      SE3(-2, 0, 0) * trotz(-pi/2), SE3(-2, 1, 0) * trotz(-pi/2), SE3(-2, 2, 0) * trotz(-pi/2),
+                      SE3(2.9, 0, 0) * trotz(-pi/2), SE3(2.9, 1, 0) * trotz(-pi/2), SE3(2.9, 2, 0) * trotz(-pi/2)]
+        self.safety_tapes = []
+        for pose in tape_poses:
+            tape = Mesh(filename=safety_tape_location, color="#F2C200", scale=[0.001, 0.001, 0.001])
+            tape.T = pose
+            env.add(tape)
+            self.safety_tapes.append(tape)
 
-        for barrier in self.safety_barriers:
-            env.add(barrier)
-
-        #Estop
+        #Estop, just outside the front tape
         self.estop = part_mesh("EmergencyStopButton")
-        self.estop.T = SE3(-1.5, 2.1, 0) #outside the front fence near the rail start
+        self.estop.T = SE3(-1.5, 2.1, 0)
         env.add(self.estop)
 
-        #Safety Man
+        #Safety Man, standing next to the estop
         self.safety_man = part_mesh("SafetyPerson")
-        self.safety_man.T = SE3(-1.0, 2.4, 0) #standing next to the estop
+        self.safety_man.T = SE3(-1.0, 2.4, 0)
         env.add(self.safety_man)

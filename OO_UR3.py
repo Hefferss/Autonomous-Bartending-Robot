@@ -6,9 +6,18 @@ from spatialmath.base import transl
 from roboticstoolbox import models
 
 #toolbox UR3 ignores its base when it does ikine_LM so it aims at the wrong spot once its moved off the origin. this shifts the target into the robots own frame first
+#also: the toolbox UR3 has two end frames. it defaults to "ee_link", whose x axis points out of the flange, so aiming its z down left the tool pointing sideways.
+#"tool0" has z out of the flange (like every other robot here), so fkine, ikine and the jacobian all use tool0 and straight-down targets really are straight down
 class UR3BaseFix(models.UR3):
     def ikine_LM(self, target_pose, **extra_settings):
+        extra_settings.setdefault("end", "tool0")
         return super().ikine_LM(self.base.inv() * target_pose, **extra_settings) #adds all the GUI extra settings. will be updated depending on whatever WIll changes in the GUi code
+
+    def fkine(self, q, end=None, **extra_settings):
+        return super().fkine(q, end=end or "tool0", **extra_settings)
+
+    def jacob0(self, q, end=None, **extra_settings):
+        return super().jacob0(q, end=end or "tool0", **extra_settings)
 
 #same as UR3.py but class (object orientated):) the OO files need .robot .meshes .offsets .home_q
 class UR3Robot:
@@ -16,6 +25,8 @@ class UR3Robot:
 
         self.robot = UR3BaseFix() #toolbox UR3. comes with its own meshes so no stls needed for the arm
         self.home_q = np.zeros(self.robot.n) #same start pose as UR3.py
+        #joint limits (deg) tighter than the toolbox's +-360 so it can't fold into itself: shoulder stays above horizontal, elbow can't fold flat, no full spins
+        self.robot.qlim = np.radians([[-180, -180, -160, -180, -180, -180], [ 180,    0,  160,  180,  180,  180]])
         if base is not None:
             self.robot.base = base
 
@@ -38,14 +49,5 @@ class UR3Robot:
                 return False
             self.robot.base = self.robot.base * SE3(move_step, 0, 0) 
             mover.update_meshes(self.robot.q) #platform follows the base. instead of (ur3_base_mesh.T = ur3_base_mesh.T * SE3(move_step, 0, 0))
-            mover.workcell.env.step(0.05)
+            mover.workcell.step(0.05) #workcell.step instead of env.step so the xbox estop gets checked while sliding too
         return True
-
-    def move_and_grab(self, mover, item, item_name="item", steps=30): #move the UR3 to item position and attach it to the end-effector. uses inverse kinematics to find the joint angles needed to reach the item. also attaches it. would be a seperate command but i think concantenating it like this would be a wise decision here.
-        item_pos = item.T[0:3, 3] #gets item position
-        target_pose = SE3(item_pos[0], item_pos[1], item_pos[2]) #gest xyz pos
-        result = self.robot.ikine_LM(target_pose, q0=self.robot.q, mask=[1,1,1,0,0,0]) #usual
-        mover.move_to_q(result.q, steps) #same jtraj move as before but the OO mover does it so the estop works. mover taken from wills code
-
-        mover.grab(item)  # attach item to end-effector. the mover keeps it there on every move now
-        mover.workcell.env.step()

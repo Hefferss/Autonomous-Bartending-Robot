@@ -1,318 +1,368 @@
-# Comment Author: Will
-# The Intention of this file is to create a class containing functions that allow any robot set up correctly to share the same movement commands
-# The file contains two classes:
-# Workcell - the class sets up the swift environment and adds the robots, inputs & Emergency stop behaviour
-# RobotMover - This contains all the actual movement commands that the robots can call
-# For a robot to use these functions it requires .robot, .meshes, .offsets and .home_q
-
-# For the Safety requirements, the file has a safety state. Running is default and allows movment
-# Emergnecy stop stops the robot and blocks all movement until the restart button is pressed, which is irl equivalent of twisting e stop after pressing it
-# This will allow robot movment again: RUNNING -> ESTOPPED -> RESET -> RUNNING
-
-# NEW IN THIS VERSION (ALL COMMENTS IN CAPITALS ARE NEW):
-# SOLVE_IK - ONE PLACE WHERE INVERSE KINEMATICS IS SOLVED, SO EVERY MOVE GIVES THE SAME ANSWER EVERY TIME
-# MOVE_RMRC - STRAIGHT LINE MOVEMENT USING RESOLVED MOTION RATE CONTROL. FOLLOWS THE LAB 9 SOLUTION (QUESTION 1) STEP BY STEP
-# MOVE_TO_POSE AND JOG NOW CALL SOLVE_IK INSTEAD OF CALLING IKINE_LM THEMSELVES
-# ALL GRAPHING CODE HAS BEEN REMOVED (NO PLOTS ARE REQUIRED, ONLY THE MOVEMENT)
+# comment author: will
+# workcell = swift, robots, inputs and the e-stop states (running -> estopped -> reset -> running). RobotMover = the shared movement commands (needs .robot .meshes .offsets .home_q)
 
 import swift                      
-import numpy as np                # NEW: NUMPY, USED FOR THE RMRC MATHS (ARRAYS, CLIPPING)
-from roboticstoolbox import jtraj, trapezoidal # Minimum jerk profile | NEW: TRAPEZOIDAL GIVES A SMOOTH 0 TO 1 SPEED PROFILE FOR RMRC
+import numpy as np
+from roboticstoolbox import jtraj, trapezoidal
 from spatialmath import SE3       
+from OO_Collision import CollisionChecker
+from math import pi 
+
+TABLE_HEIGHT = 0.25 # top of every table. no robot joint is allowed below this
+TABLE_CLEARANCE = 0.03 # links have thickness, so every joint away from the gripper stays this far above the table
 
 
-# The workcell class sets up swift and adds the robot, input and safety states to the 3D environment
+# the workcell class sets up swift and adds the robot, input and safety states to the 3D environment
 class Workcell:
 
-    # This is the constructor that allows the object that uses the workcell class to have these variables that are 
-    # Required for the fucntions
+    # constructor: swift window, safety state, robots, input devices
     def __init__(self):
-        self.env = swift.Swift()              # Creates simulation object - doesnt run until swift launches
-        self.state = "RUNNING"                # Establishes the state as "RUNNING" string for If statements Later
-        self.movers = {}                      # The Dictionary that stores both a robots given name and its object from the robot's class file
-        self.inputs = []                      # List to store input devices (like the Xbox controller) to check every step uisng poll() - the function that determines whether its been pressed 
+        self.env = swift.Swift()
+        self.state = "RUNNING"
+        self.movers = {}
+        self.inputs = []
+        self.collision_on = False
 
 
-    # Add Robot Function
-    # Gets called in the Main file, adds the robot dicitonary to be called later
-    # The Robot is stored with name and the robot class where robot setup parameter accepts robots class (Which robot to use)
-    # The name is required for the robot GUI drop down box
+    # add robot function: stores the robot under its name (the name is used in the GUI drop down box)
     def add_robot(self, name, robot_setup):
-        print("Added robot:", name)                       # Print to terminal for debugging
-        mover = RobotMover(robot_setup, self)             # give the mover the setup AND this workcell
-        self.movers[name] = mover                         # stores the name and robot in the dictionary set up by constructor 
-        return mover                                      # returns value
+        print("Added robot:", name)
+        mover = RobotMover(robot_setup, self)
+        self.movers[name] = mover
+        return mover
 
-    # Add Input Function
-    # The device needs a poll() method. It is called on every step() below.
+    # add input function: the device needs a poll() method, called on every step() below
     def add_input(self, device):
-        self.inputs.append(device)            # appends the list with the device
+        self.inputs.append(device)
 
 
-    # Step function
-    # This function is responsilbe for checking whether any inputs have happened
-    # Runs each step of the animation
-    # *args is a number e.g. step(0.05)
-    # Replaces the original swift function
+    # step function: checks the inputs (e.g. xbox controller) then updates swift. replaces env.step
     def step(self, *args):
-        for device in self.inputs:            # See each input device
-            device.poll()                     # Check for Presses
-        self.env.step(*args)                  # Update the window, read the GUI
+        for device in self.inputs:
+            device.poll()
+        self.env.step(*args)
 
-    # Launch Function
-    # Opens swift, adds robots
+    # launch function: opens swift, adds robots
     def launch(self):
-        self.env.launch(realtime=True)        # open the simulator window
-        for mover in self.movers.values():    # go through every robot - takes the objects from dictionary
-            mover.add_to_scene()              # add to swift at robots home pose
-        self.env.step()                       # refresh the window
+        self.env.launch(realtime=True)
+        for mover in self.movers.values():
+            mover.add_to_scene()
+        self.env.step()
 
-    # ---- Safety state functions: used by the GUI buttons ----------------
-    # Overview: three separate steps, each only allowed from the right
-    # state, so the robots can never restart by accident.
-
-    # Safety State Functions
-    # Determines Behaviour of the robot depending on the state
+    # safety state functions: each step only works from the right state, so the robots can never restart by accident
     def emergency_stop(self):
-        self.state = "ESTOPPED"               # E Stop Doesn't need IF statement as state wise robot can be stopped at anytime
+        self.state = "ESTOPPED"
         print("STATE: ESTOPPED - all motion stopped")
 
     def reset(self):
-        if self.state != "ESTOPPED":          # reset only makes sense after an e-stop
-            print("Reset ignored - e-stop is not active") #If statement catches whether behaviour makes sense
+        if self.state != "ESTOPPED":
+            print("Reset ignored - e-stop is not active")
             return
-        self.state = "RESET"                  # e-stop cleared, functionally button twisted so it can be pressed again, but robots are still blocked
+        self.state = "RESET"
         print("STATE: RESET - press RESTART when the area is clear")
 
     def restart(self):
-        if self.state != "RESET":             # Must be Reset button before restart can be pressed
-            print("Restart ignored - reset the e-stop first") #IF Statement catches restart pressed before it should be
+        if self.state != "RESET":
+            print("Restart ignored - reset the e-stop first")
             return
-        self.state = "RUNNING"                # Movement is allowed again.
+        self.state = "RUNNING"
         print("STATE: RUNNING")
 
 
-# Robot Mover Class
+# robot mover class
 class RobotMover:
 
-    # This is the constructor that defines what info required from robot for movement to work
+    # constructor: the robot, its meshes + offsets, home pose, held items and collision ellipsoids
     def __init__(self, robot_setup, workcell):
-        self.workcell = workcell              # It Requires the Swift environment in the 
-        self.robot = robot_setup.robot        # The original DH Robot from AT1 and weekly lab same setup
-        self.meshes = robot_setup.meshes      # Requires STL mesh list to update
-        self.offsets = robot_setup.offsets    # The list of Mesh offsets for updating
-        self.home_q = robot_setup.home_q      # The Starting Pose for the 'return to home' button
-        self.held = [] # ATTACHMENT: items this robot is carrying, as (mesh, offset from the EE) pairs
+        self.workcell = workcell
+        self.robot = robot_setup.robot
+        self.meshes = robot_setup.meshes
+        self.offsets = robot_setup.offsets
+        self.home_q = robot_setup.home_q
+        self.held = []
+        self.checker = CollisionChecker(self.robot)
 
-    # Grab (ATTACHMENT)
-    # Attaches an item to the end effector, same idea as the lab 4 pen: item pose = fkine().A @ offset
+    # grab (attachment): attaches an item to the end effector, same idea as the lab 4 pen
     def grab(self, item):
-        T_ee = self.robot.fkine(self.robot.q).A # where the end effector is now
-        self.held.append((item, np.linalg.inv(T_ee) @ np.array(item.T))) # item pose relative to the EE
+        T_ee = self.robot.fkine(self.robot.q).A
+        self.held.append((item, np.linalg.inv(T_ee) @ np.array(item.T)))
         print("Grabbed item")
 
-    # Release (ATTACHMENT)
+    # release (attachment): lets go of everything
     def release(self):
         self.held = []
         print("Released item")
 
-    # Update Mesh Function
-    # This is required for the Meshes to match the DH Parameters & Cylinder bot
-    # This was formely done in the movement loop and in the robot file now it is seperated here
-    # So that it is easy to edit, but it works the same way, only difference is its using a for loop to
-    # update each mesh rather than having a line to each one. This also allows same function for all robots
-    def update_meshes(self, q): # Accepts Joint Position as Parameters
-        link_check = self.robot.fkine_all(q)  # list that has position of every link using forward kinematic
-        for i in range(len(self.meshes)):     # go through each mesh one by one
-            # link i position  @  alignment offset  ->  mesh position
-            self.meshes[i].T = link_check[i].A @ self.offsets[i] # the mesh postion gets updated by mulyiplyin mathmatical location to the offset
-        # ATTACHMENT: held items follow the end effector. every move (jtraj, rmrc, sliders, ur3 rail) calls this so they all carry items
+    # update mesh function: moves every mesh (and any held item) to match the DH robot. same function for all robots
+    def update_meshes(self, q):
+        link_check = self.robot.fkine_all(q)
+        for i in range(len(self.meshes)):
+            self.meshes[i].T = link_check[i].A @ self.offsets[i]
         if self.held:
-            T_ee = self.robot.fkine(q).A # end effector at this step
+            T_ee = self.robot.fkine(q).A
             for item, offset in self.held:
-                item.T = T_ee @ offset # same as the lab 4 pen
+                item.T = T_ee @ offset
 
-    # Adds the Robot to the Scene
-    # The Original add robot function just to dictionary that is used 
+    # adds the robot to the scene at its home pose
     def add_to_scene(self):
-        env = self.workcell.env               # the swift env
-        env.add(self.robot)                   # add the robot mathmaticallu
-        self.robot.q = self.home_q            # Use Home pose
-        env.step()                            # Update Swift
-        self.update_meshes(self.home_q)       # Use update mesh function
-        for mesh in self.meshes:              # Adds the meshes to the robot in the sim
+        env = self.workcell.env
+        env.add(self.robot)
+        self.robot.q = self.home_q
+        env.step()
+        self.update_meshes(self.home_q)
+        for mesh in self.meshes:
             env.add(mesh)                     
 
-    # Move Robot via giving Joint angles to move to
-    # Before every step it checks the safety state and stops if its meant to
-    # Used for Sliders in the GUI
+    # move robot via giving joint angles. checks the e-stop and collisions (lab 5) before every step. if it starts touching something it's let move so it can get out
     def move_to_q(self, q_goal, steps=50):
-        traj = jtraj(self.robot.q, q_goal, steps) # jtrag from weekly labs. Minimum jerk movemet profile
+        traj = jtraj(self.robot.q, q_goal, steps)
+        touching = self.check_collision(self.robot.q)
 
-        for q_step in traj.q:                     # In between each step in the movement
-            if self.workcell.state != "RUNNING":  # If its not meant to be moving, dont move
-                print("Motion aborted")           # Print
-                return False                      # End function cancelled, didnt reach end of movement
-            self.robot.q = q_step                 # set the robot to this step
-            self.update_meshes(q_step)            # move the meshes
-            self.workcell.step()                  # check inputs, updates swift
-        return True                               # reached the end of movement
+        for q_step in traj.q:
+            if self.workcell.state != "RUNNING":
+                print("Motion aborted")
+                return False
+            if not touching and self.check_collision(q_step):
+                print("UNSAFE: Robot stopped, collision ahead")
+                return False
+            self.robot.q = q_step
+            self.update_meshes(q_step)
+            self.workcell.step()
+        return True
 
-    # SOLVE IK (NEW)
-    # THE ONE PLACE INVERSE KINEMATICS IS SOLVED. MOVE_TO_POSE AND JOG BOTH USE IT.
-    # WHY IT GIVES THE SAME ANSWER EVERY TIME:
-    #   - Q0 = CURRENT POSE: THE SOLVER STARTS FROM WHERE THE ROBOT IS, SO IT FINDS THE NEAREST SOLUTION.
-    #     WITHOUT Q0, IKINE_LM STARTS FROM RANDOM JOINT ANGLES ON EVERY CALL, WHICH CAN FLIP THE ELBOW OR WRIST.
-    #   - SEED = 0: IF THE FIRST TRY FAILS THE SOLVER RESTARTS FROM RANDOM ANGLES. A FIXED SEED MAKES THOSE
-    #     RESTARTS THE SAME EVERY RUN.
-    #   - JOINT_LIMITS = TRUE: NEVER RETURNS ANGLES OUTSIDE THE JOINT LIMITS.
-    # RAISES VALUEERROR IF THERE IS NO SOLUTION (TARGET OUT OF REACH).
-    def solve_ik(self, T_target, q0=None):
-        if q0 is None:                                    # NO START POSE GIVEN?
-            q0 = self.robot.q                             # USE THE ROBOT'S CURRENT POSE
-        ik_sol = self.robot.ikine_LM(T_target, q0=q0, joint_limits=True, seed=0)    # solve inverse kinematics | NEW: START POSE, JOINT LIMITS AND FIXED SEED ADDED
-        if not ik_sol.success:                    # if no solution was found...
-            raise ValueError("Inverse kinematics failed to find a valid solution for the target pose!") #If Fails give reason why
-        return ik_sol.q                                   # THE JOINT ANGLES THAT REACH THE TARGET
-
-    # Move to Pose. This is the Essential IK function we are using, calculates then using function above
-    # NOW USES SOLVE_IK ABOVE. THIS IS A JOINT-SPACE MOVE: EVERY JOINT BLENDS SMOOTHLY FROM START TO END,
-    # SO THE HAND TRAVELS ALONG A CURVE. USE MOVE_RMRC BELOW WHEN THE PATH OF THE HAND MATTERS.
-    def move_to_pose(self, T_target, steps=50):
-        q_goal = self.solve_ik(T_target)          # solve inverse kinematics | NOW DONE BY SOLVE_IK
-        print("IK Solution found (radians):", q_goal)  #print to terminal for debugging
-        return self.move_to_q(q_goal, steps)    # use function above to move to joints found
-
-    # PICK DROP: ABOVE, DOWN, GRAB (IF GIVEN AN ITEM) OR LET GO, BACK UP. STOPS ON E-STOP
-    def pick_drop(self, xyz, item=None, lift=0.1, steps=50):
-        T_spot = SE3(*xyz) * SE3.Rx(np.pi)        # the spot, tool pointing down
-        T_above = SE3(0, 0, lift) * T_spot        # same pose, lifted in the world frame
-        if not self.move_to_pose(T_above, steps): # above
+    # check collision: lab 5 check_collision. hits if a joint goes under the table, or the other robots' links (as points) are inside my lab 6 ellipsoids
+    def check_collision(self, q):
+        if not self.workcell.collision_on:
             return False
-        if not self.move_to_pose(T_spot, steps // 2): # down
+        if not self.above_table(q):
+            return True
+        if self.checker.self_hit(q): # a link going through its own robot
+            return True
+        for other in self.workcell.movers.values():
+            if other is self:
+                continue
+            points = other.checker.link_points(other.robot.q)
+            if self.checker.collides(q, points):
+                return True
+        return False
+
+    # above table: the gripper end (within 10 cm of the tip) can go down to the table top so it can pick things up. every other joint stays TABLE_CLEARANCE above it
+    def above_table(self, q):
+        frames = self.robot.fkine_all(q)
+        tip = self.robot.fkine(q).t
+        for T in frames[1:]:
+            if np.allclose(T.t, frames[0].t):
+                continue
+            near_tip = np.linalg.norm(T.t - tip) < 0.1
+            if T.t[2] < TABLE_HEIGHT - 0.005 or (not near_tip and T.t[2] < TABLE_HEIGHT + TABLE_CLEARANCE):
+                return False
+        return True
+
+    # solve IK: tries several starts, keeps only answers inside the joint limits and above the table,
+    # then picks the one closest to the current joint angles (avoids wrist flips and odd paths)
+    def solve_ik(self, T_target, q0=None):
+        if q0 is None:
+            q0 = self.robot.q
+        q_now = np.array(self.robot.q, dtype=float)
+        best_q = None
+        best_dist = None
+        for start in [q0, self.home_q]:
+            ik_sol = self.robot.ikine_LM(T_target, q0=start, joint_limits=True, seed=0)
+            if not ik_sol.success:
+                continue
+            q = np.array(ik_sol.q, dtype=float)
+            q = self.closest_turn(q, q_now) # same pose, but no extra full spins of the wrist
+            if np.any(q < self.robot.qlim[0]) or np.any(q > self.robot.qlim[1]):   # explicit limit check
+                continue
+            if not self.above_table(q):
+                continue
+            dist = np.linalg.norm(q - q_now)               # how far the joints have to travel
+            if best_dist is None or dist < best_dist:
+                best_q, best_dist = q, dist
+        if best_q is None:
+            raise ValueError("Inverse kinematics failed to find a valid solution for the target pose!")
+        return best_q
+
+    # closest turn: q and q +- 360 deg is the same pose. use whichever is closest to q_now if it's inside the limits
+    def closest_turn(self, q, q_now):
+        q_close = q_now + (q - q_now + np.pi) % (2 * np.pi) - np.pi
+        inside = (q_close >= self.robot.qlim[0]) & (q_close <= self.robot.qlim[1])
+        return np.where(inside, q_close, q)
+
+    # move to pose: IK then move_to_q. if a collision stops it, re-plan like the A1 lift step: up, across above the target, down (tries 0.2 then 0.4 m)
+    def move_to_pose(self, T_target, steps=50):
+        if self.workcell.state != "RUNNING": # after an e-stop, don't even try the IK
+            return False
+        q_goal = self.solve_ik(T_target)
+        if self.move_to_q(q_goal, steps):
+            return True
+        if self.workcell.state != "RUNNING":
+            return False
+
+        for lift in [0.2, 0.4]:
+            print("Re-planning: going over the top at", lift, "m")
+            try:
+                q_up_here = self.solve_ik(SE3(0, 0, lift) * self.robot.fkine(self.robot.q))
+                q_up_there = self.solve_ik(SE3(0, 0, lift) * T_target, q0=q_up_here)
+                q_down = self.solve_ik(T_target, q0=q_up_there)
+            except ValueError:
+                continue
+            if self.move_to_q(q_up_here, steps // 2) and self.move_to_q(q_up_there, steps) and self.move_to_q(q_down, steps // 2):
+                return True
+            if self.workcell.state != "RUNNING":
+                return False
+        print("No clear path - robot staying put")
+        return False
+
+    # pick drop: above, down, grab (if given an item) or let go, back up. stops on e-stop
+    def pick_drop(self, xyz, item=None, lift=0.1, steps=50, tool=SE3.Rx(np.pi)):
+        T_spot = SE3(*xyz) * tool
+        T_above = SE3(0, 0, lift) * T_spot
+        if not self.move_to_pose(T_above, steps):
+            return False
+        if not self.move_to_pose(T_spot, steps // 2):
             return False
         if item is not None:
-            self.grab(item)
+            for it in (item if isinstance(item, (list, tuple)) else [item]): # one item or a list of them (e.g. glass + umbrella)
+                self.grab(it)
         else:
             self.release()
-        return self.move_to_pose(T_above, steps // 2) # back up
+        return self.move_to_pose(T_above, steps // 2)
 
-    # TUCK: PULLS THE EE BACK OVER ITS OWN BASE, OUT OF THE WAY (X FOLLOWS THE BASE ON THE RAIL)
-    def tuck(self, y=0.0, height=0.7, steps=50):
-        return self.move_to_pose(SE3(self.robot.base.t[0], y, height) * SE3.Rx(np.pi), steps)
+    # tuck: folds the arm up over its own base, out of the way (UR3 tuck pose)
+    def tuck(self):
+        return self.move_to_q([0, -pi/2, pi/2, 0, 0, 0])
 
-    # MOVE RMRC (NEW)
-    # RESOLVED MOTION RATE CONTROL, FOLLOWING THE LAB 9 SOLUTION (QUESTION 1). THE STEP NUMBERS BELOW MATCH THE LAB.
-    # MOVES THE HAND IN A STRAIGHT LINE FROM WHERE IT IS NOW TO T_TARGET.
-    # EVERY SMALL STEP IT:
-    #   - WORKS OUT THE VELOCITY NEEDED TO REACH THE NEXT POINT ON THE LINE (FEEDBACK, SO DRIFT IS CORRECTED)
-    #   - WEIGHTS THAT VELOCITY WITH W SO POSITION MATTERS MORE THAN ORIENTATION
-    #   - USES THE JACOBIAN TO TURN IT INTO JOINT VELOCITIES (DAMPED LEAST SQUARES NEAR A SINGULARITY)
-    #   - STOPS ANY JOINT THAT WOULD GO PAST ITS LIMIT, THEN MOVES THE JOINTS A SMALL STEP
-    # WHAT IS DIFFERENT FROM THE LAB, AND WHY:
-    #   - THE LAB COMPUTES EVERY STEP FIRST AND PLAYS IT AFTERWARDS. THIS PLAYS EACH STEP AS IT IS CALCULATED
-    #     (SAME MATHS) SO THE E-STOP CAN INTERRUPT IT.
-    #   - EPSILON IS SCALED BY THE ROBOT'S SIZE. THE LAB USES 0.1, WHICH SUITS THE PUMA 560. THE MANIPULABILITY
-    #     VALUE GETS SMALLER FOR SMALLER ROBOTS, SO THE SAME 0.1 WOULD DAMP A UR3 ALL THE TIME.
-    #   - THE LAB'S ORIENTATION STAYS FIXED. HERE THE ORIENTATION TURNS SMOOTHLY FROM THE START POSE TO THE TARGET POSE.
-    #   - IT CHECKS THE HAND ARRIVED AND RETURNS TRUE OR FALSE (THE LAB JUST PLOTS).
-    #   - NO PLOTTING: THE LAB'S RESULT ARRAYS ARE NOT SAVED ANY MORE, ONLY THE ARRAYS THE MOVEMENT NEEDS ARE KEPT.
-    # ARGUMENTS:
-    #   DURATION: SECONDS THE MOVE TAKES IN THE MATHS (THE LAB'S t)
-    #   STEPS: HOW MANY STEPS THE MOVE IS SPLIT INTO
-    #   TOLERANCE: HOW CLOSE (METRES) THE HAND MUST FINISH TO COUNT AS SUCCESS
-    #   EPSILON: MANIPULABILITY BELOW THIS MEANS "NEAR A SINGULARITY". None = THE LAB'S 0.1 SCALED TO THIS ROBOT
-    #   ORIENTATION_WEIGHT: THE 0.1 IN THE LAB'S W MATRIX. RAISE IT TO 1 IF THE FINAL ORIENTATION MATTERS MORE
-    #   MAX_JOINT_STEP: OPTIONAL SAFE-SPEED LIMIT (RADIANS PER STEP). None = OFF, AS IN THE LAB
-    #   MAX_DAMPING: THE 0.05 IN THE LAB'S DAMPING FORMULA. LOWER = MORE ACCURATE TRACKING, BUT LESS PROTECTION NEAR A SINGULARITY
-    # RETURNS TRUE IF IT REACHED THE TARGET. RETURNS FALSE IF THE E-STOP STOPPED IT, OR IF IT FINISHED TOO FAR AWAY
-    # (TARGET OUT OF REACH, OR BLOCKED BY A SINGULARITY OR JOINT LIMIT).
-    def move_rmrc(self, T_target, duration=3.0, steps=60, tolerance=0.005,
-                  epsilon=None, orientation_weight=0.1, max_joint_step=None, max_damping=0.05):
-        robot = self.robot                                # SHORT NAME FOR THE ROBOT
-        n = robot.n                                       # NUMBER OF JOINTS
-
-        # 1.1) SET PARAMETERS FOR THE SIMULATION
-        delta_t = duration / (steps - 1)                  # DISCRETE TIME STEP (S)
-        if epsilon is None:                               # NO EPSILON GIVEN?
-            PUMA_REACH = 1.706                            # THE REACH (AS ROBOTICS TOOLBOX MEASURES IT) OF THE LAB'S PUMA 560
-            try:
-                size = (robot.reach / PUMA_REACH) ** 3    # MANIPULABILITY GROWS WITH SIZE CUBED
-            except Exception:                             # THIS ROBOT HAS NO REACH VALUE
-                size = 1.0                                # SO USE THE LAB'S VALUE AS IT IS
-            epsilon = 0.1 * size                          # THE LAB'S 0.1, SCALED TO THIS ROBOT
-        W = np.diag([1, 1, 1, orientation_weight, orientation_weight, orientation_weight])   # WEIGHTING MATRIX FOR THE VELOCITY VECTOR
-
-        # 1.2) ALLOCATE ARRAY DATA
-        q_matrix = np.zeros([steps, n])                   # JOINT ANGLES
-        qdot = np.zeros([steps, n])                       # JOINT VELOCITIES
-
-        # 1.3) SET UP TRAJECTORY, INITIAL POSE
-        T_start = robot.fkine(robot.q)                    # WHERE THE HAND IS NOW (WORLD FRAME)
-        s = trapezoidal(0, 1, steps).q                    # TRAPEZOIDAL TRAJECTORY SCALAR
-        x = np.zeros([3, steps])                          # POINTS ON THE STRAIGHT LINE
-        R_want = []                                       # THE ORIENTATION WANTED AT EACH POINT
+    # wait: holds still for a few steps (e.g. while pouring). workcell.step so the e-stop still works. false if e-stopped
+    def wait(self, steps=20):
         for i in range(steps):
-            x[:, i] = (1 - s[i]) * T_start.t + s[i] * T_target.t   # STRAIGHT LINE FROM START TO TARGET
-            R_want.append(T_start.interp(T_target, s[i]).R)        # ORIENTATION TURNS SMOOTHLY (THE LAB KEEPS IT FIXED)
-        q_matrix[0, :] = robot.q                          # START FROM WHERE THE ROBOT IS (THE LAB USES IK HERE)
-        qlim = np.transpose(robot.qlim)                   # JOINT LIMITS, ONE ROW PER JOINT
+            if self.workcell.state != "RUNNING":
+                return False
+            self.workcell.step(0.05)
+        return True
 
-        # 1.4) TRACK THE TRAJECTORY WITH RMRC
+    # RMRC to: straight line with RMRC, normal move if RMRC fails (singularity, joint limit)
+    def rmrc_to(self, T_target, orientation_weight=0.1, duration=1.0, steps=20):
+        if self.move_rmrc(T_target, duration=duration, steps=steps, orientation_weight=orientation_weight):
+            return True
+        return self.workcell.state == "RUNNING" and self.move_to_pose(T_target)
+
+    # carry: pick up and put down with RMRC, one joint move across. pick IK is seeded from the drop so the arm never flips shape
+    def carry(self, from_xyz, to_xyz, item, lift=0.1, tool=SE3.Rx(np.pi)):
+        T_pick, T_drop = SE3(*from_xyz) * tool, SE3(*to_xyz) * tool
+        T_up_pick, T_up_drop = SE3(0, 0, lift) * T_pick, SE3(0, 0, lift) * T_drop
+        q_up_drop = self.solve_ik(T_up_drop, q0=self.home_q) # arm shape above the drop
+        ik_sol = self.robot.ikine_LM(T_up_pick, q0=q_up_drop, joint_limits=True) # same shape above the pick
+        q_up_pick = self.closest_turn(ik_sol.q, q_up_drop) if ik_sol.success and self.above_table(ik_sol.q) else self.solve_ik(T_up_pick)
+        if not (self.move_to_q(q_up_pick) and self.rmrc_to(T_pick)): # over it, straight down
+            return False
+        self.grab(item)
+        if not (self.rmrc_to(T_up_pick) and self.move_to_q(self.solve_ik(T_up_drop, q0=q_up_drop)) and self.rmrc_to(T_drop)): # up, across, down
+            return False
+        self.release()
+        return self.rmrc_to(T_up_drop) # straight back up
+
+    # neck pour: grabs a bottle by its neck at neck_xyz, RMRC over the shaker, tips it, tips back, RMRC back and puts it down
+    def neck_pour(self, neck_xyz, item, over_xyz, length, tilt=-1.6, hold=20):
+        T_up = SE3(over_xyz[0], over_xyz[1], over_xyz[2] + length + 0.03) * SE3.Rx(np.pi) # neck over the shaker, bottom clears the rim
+        T_back = SE3(0, 0, 0.1) * SE3(*neck_xyz) * SE3.Rx(np.pi) # 10 cm above where it was picked up
+        if not (self.pick_drop(neck_xyz, item) and self.rmrc_to(T_up, duration=2.0, steps=40)):
+            return False
+        if not self.rmrc_to(T_up * SE3.Rx(tilt), orientation_weight=1.0, duration=2.0, steps=40): # RMRC tip, hand stays put
+            return False
+        if not self.wait(hold): # pouring
+            return False
+        return (self.rmrc_to(T_up, orientation_weight=1.0, duration=2.0, steps=40) and self.rmrc_to(T_back, duration=2.0, steps=40)
+                and self.pick_drop(neck_xyz)) # tip back, RMRC back, put it down
+
+    # move RMRC: lab 9 Q1 RMRC, straight line from where the hand is now to T_target. step numbers match the lab
+    # differences from the lab:
+    #   - each step is played as it's calculated, so the e-stop and collision check can stop it mid-line
+    #   - epsilon is the lab's 0.1 scaled by robot size (manipulability shrinks with size cubed), so small robots aren't always damped
+    #   - orientation turns smoothly from the start pose to the target instead of staying fixed
+    #   - returns true if the hand finished within 5 mm of the target, false if e-stopped, blocked or out of reach
+    # orientation_weight: the 0.1 in the lab's w matrix. 1.0 when the final orientation matters (pouring, tipping)
+    def move_rmrc(self, T_target, duration=3.0, steps=60, orientation_weight=0.1):
+        robot = self.robot
+        num_joints = robot.n
+
+        # 1.1) set parameters
+        dt = duration / (steps - 1) # time per step (s)
+        singularity_threshold = 0.1 * (robot.reach / 1.706) ** 3 # lab's epsilon 0.1, scaled from the puma 560'S reach (1.706 m) to this robot
+        max_damping = 0.05 # lab's max damping (lambda)
+        weights = np.diag([1, 1, 1, orientation_weight, orientation_weight, orientation_weight]) # lab's w: how much position vs orientation error matters
+
+        # 1.2) allocate arrays
+        q_path = np.zeros([steps, num_joints]) # joint angles at each step
+        q_velocity = np.zeros([steps, num_joints]) # joint velocities at each step
+
+        # 1.3) set up the straight line
+        T_start = robot.fkine(robot.q) # where the hand is now (world frame)
+        progress = trapezoidal(0, 1, steps).q # 0 -> 1 along the line, speeds up, cruises, slows down
+        line_points = np.zeros([3, steps]) # points on the straight line
+        rotations_wanted = [] # the orientation wanted at each point
+        for i in range(steps):
+            line_points[:, i] = (1 - progress[i]) * T_start.t + progress[i] * T_target.t # straight line from start to target
+            rotations_wanted.append(T_start.interp(T_target, progress[i]).R) # orientation turns smoothly (the lab keeps it fixed)
+        q_path[0, :] = robot.q # start from where the robot is (the lab uses IK here)
+        joint_limits = np.transpose(robot.qlim) # one row per joint: [min, max]
+
+        # 1.4) follow the line with RMRC, one step at a time
         for i in range(steps - 1):
-            if self.workcell.state != "RUNNING":          # SAME E-STOP CHECK AS MOVE_TO_Q
-                print("RMRC motion aborted")              # PRINT
-                return False                              # STOP IMMEDIATELY, DROP THE REST OF THE LINE
-            # (A COLLISION CHECK WOULD GO HERE, BEFORE THE ROBOT MOVES)
+            if self.workcell.state != "RUNNING": # same e-stop check as MOVE_TO_Q
+                print("RMRC motion aborted")
+                return False
 
-            T = robot.fkine(q_matrix[i, :]).A             # FORWARD TRANSFORMATION AT THE CURRENT JOINT STATE
-            delta_x = x[:, i + 1] - T[:3, 3]              # POSITION ERROR FROM THE NEXT WAYPOINT
-            Rd = R_want[i + 1]                            # THE NEXT ORIENTATION WANTED
-            Ra = T[:3, :3]                                # CURRENT END-EFFECTOR ROTATION MATRIX
-            Rdot = (1 / delta_t) * (Rd - Ra)              # ROTATION MATRIX ERROR
-            S = Rdot @ Ra.T                               # SKEW-SYMMETRIC MATRIX
-            linear_velocity = (1 / delta_t) * delta_x
-            angular_velocity = np.array([S[2, 1], S[0, 2], S[1, 0]])   # PICK THE ANGULAR VELOCITY OUT OF THE SKEW MATRIX
-            xdot = W @ np.vstack((linear_velocity.reshape(3, 1),
-                                  angular_velocity.reshape(3, 1)))   # END-EFFECTOR VELOCITY TO REACH THE NEXT WAYPOINT
-            J = robot.jacob0(q_matrix[i, :])              # JACOBIAN AT THE CURRENT JOINT STATE
-            m = np.sqrt(np.linalg.det(J @ J.T))           # MANIPULABILITY: CLOSE TO 0 MEANS NEAR A SINGULARITY
-            if m < epsilon:                               # IF MANIPULABILITY IS LESS THAN THE THRESHOLD
-                m_lambda = (1 - m / epsilon) * max_damping   # DAMPING GROWS AS WE GET CLOSER TO THE SINGULARITY (LAB: 0.05)
-            else:
-                m_lambda = 0
-            inv_j = np.linalg.inv(J.T @ J + m_lambda * np.eye(n)) @ J.T    # DAMPED LEAST SQUARES INVERSE
-            qdot[i, :] = (inv_j @ xdot).T                 # SOLVE THE RMRC EQUATION
-            if max_joint_step is not None:                # OPTIONAL SAFE-SPEED LIMIT (OFF BY DEFAULT, NOT IN THE LAB)
-                biggest = np.max(np.abs(qdot[i, :])) * delta_t
-                if biggest > max_joint_step:
-                    qdot[i, :] = qdot[i, :] * (max_joint_step / biggest)
-            for j in range(n):                            # LOOP THROUGH THE JOINTS
-                if q_matrix[i, j] + delta_t * qdot[i, j] < qlim[j, 0]:     # NEXT ANGLE BELOW THE LIMIT...
-                    qdot[i, j] = 0                        # STOP THE MOTOR
-                elif q_matrix[i, j] + delta_t * qdot[i, j] > qlim[j, 1]:   # NEXT ANGLE ABOVE THE LIMIT...
-                    qdot[i, j] = 0                        # STOP THE MOTOR
-            q_matrix[i + 1, :] = q_matrix[i, :] + delta_t * qdot[i, :]     # NEXT JOINT STATE FROM THE JOINT VELOCITIES
+            # how fast the hand needs to move to reach the next point on the line
+            T_now = robot.fkine(q_path[i, :]).A # where the hand is at this step
+            position_error = line_points[:, i + 1] - T_now[:3, 3] # gap to the next point on the line
+            R_wanted = rotations_wanted[i + 1] # the next orientation wanted
+            R_now = T_now[:3, :3] # current hand orientation
+            R_rate = (1 / dt) * (R_wanted - R_now) # how fast the rotation needs to change
+            skew = R_rate @ R_now.T # skew-symmetric matrix, holds the angular velocity
+            linear_velocity = (1 / dt) * position_error
+            angular_velocity = np.array([skew[2, 1], skew[0, 2], skew[1, 0]]) # pull the angular velocity out of the skew matrix
+            hand_velocity = weights @ np.vstack((linear_velocity.reshape(3, 1),
+                                                 angular_velocity.reshape(3, 1))) # 6x1 hand velocity (the lab's xdot)
 
-            robot.q = q_matrix[i + 1, :]                  # THE LAB PLAYS THESE AT THE END. HERE EACH STEP IS PLAYED AS IT IS CALCULATED
-            self.update_meshes(robot.q)                   # MOVE THE MESHES TO MATCH
-            self.workcell.step()                          # CHECK INPUTS, UPDATE SWIFT
+            # turn hand velocity into joint velocities, with damping near a singularity
+            J = robot.jacob0(q_path[i, :]) # jacobian: how each joint moves the hand, at this pose
+            manipulability = np.sqrt(np.linalg.det(J @ J.T)) # how freely the hand can move. 0 = at a singularity
+            if manipulability < singularity_threshold: # near a singularity: fade in damping, more the closer we get
+                damping = (1 - manipulability / singularity_threshold) * max_damping
+            else: # far from one: no damping, plain RMRC
+                damping = 0
+            J_inverse = np.linalg.inv(J.T @ J + damping * np.eye(num_joints)) @ J.T # damped least squares: the damping stops the inverse blowing up
+            q_velocity[i, :] = (J_inverse @ hand_velocity).T # joint velocities = j inverse * hand velocity
 
-        # DID THE HAND ACTUALLY ARRIVE? (NOT IN THE LAB)
-        error = np.linalg.norm(robot.fkine(q_matrix[-1, :]).t - T_target.t)   # DISTANCE LEFT TO THE TARGET (METRES)
-        if error > tolerance:                             # FINISHED TOO FAR AWAY?
-            print("RMRC finished %.1f mm from the target (out of reach, near a singularity or at a joint limit)" % (error * 1000))
+            for j in range(num_joints): # stop any joint that would go past its limit
+                if q_path[i, j] + dt * q_velocity[i, j] < joint_limits[j, 0]:
+                    q_velocity[i, j] = 0
+                elif q_path[i, j] + dt * q_velocity[i, j] > joint_limits[j, 1]:
+                    q_velocity[i, j] = 0
+            q_path[i + 1, :] = q_path[i, :] + dt * q_velocity[i, :] # next joint angles = now + velocity * time
+
+            if self.check_collision(q_path[i + 1, :]): # same table + robot check as move_to_q
+                print("UNSAFE: RMRC stopped, collision ahead")
+                return False
+            robot.q = q_path[i + 1, :] # play this step now (the lab plays them all at the end)
+            self.update_meshes(robot.q)
+            self.workcell.step()
+
+        # did the hand actually arrive?
+        distance_left = np.linalg.norm(robot.fkine(q_path[-1, :]).t - T_target.t) # metres from the target
+        if distance_left > 0.005: # more than 5 mm off
+            print("RMRC finished %.1f mm from the target (out of reach, near a singularity or at a joint limit)" % (distance_left * 1000))
             return False
-        return True                                       # REACHED THE TARGET
+        return True
 
-    # Jog for testing
-    # NOW USES SOLVE_IK, SO A JOG GIVES THE SAME RESULT AS EVERY OTHER MOVE
+    # jog: nudges the end effector in x, y, z (GUI jog buttons)
     def jog(self, dx, dy, dz, steps=10):
-        T_now = self.robot.fkine(self.robot.q)                # current end effector pose
-        T_new = SE3(dx, dy, dz) * T_now                       # same pose, shifted in the world frame
-        try:                                                  # SOLVE_IK RAISES VALUEERROR WHEN THERE IS NO SOLUTION
-            q_goal = self.solve_ik(T_new)                     # IK, starting from where we are
-        except ValueError:                                    # if it can't reach
-            print("Jog out of reach - move cancelled")        # cancel move, dont do
+        T_now = self.robot.fkine(self.robot.q)
+        T_new = SE3(dx, dy, dz) * T_now
+        try:
+            q_goal = self.solve_ik(T_new)
+        except ValueError:
+            print("Jog out of reach - move cancelled")
             return False
-        return self.move_to_q(q_goal, steps)                # otherwise do the small movement
+        return self.move_to_q(q_goal, steps)
