@@ -5,35 +5,40 @@ import os
 from spatialmath.base import trotx, trotz, transl
 from spatialgeometry import Mesh
 
-#same as jackrobotmodel but class (object orientated):)
+# Jack's robot: Staubli TX2-60 (standard, not the L). 6 dof, 670 mm reach, 4.5 kg payload. does the lid + shake station
+# dims and joint limits from the official Staubli TX2-60 datasheet, cross checked with the ros-industrial staubli_tx2_60_support xacro
+# datasheet checks: vertical height 375+290+310+70 = 1045 mm, axis 1-5 reach 290+310 = 600 mm, axis 3-5 reach 310 mm (= d4), flange adds 70 -> 670 mm
+# the class gives .robot .meshes .offsets .home_q, which is all the OO movement code (RobotMover) needs
 class StaubliTX60:
     def __init__(self, base=None): #base is where it sits in the scene, e.g. transl(0, 0.75, 0.25). leave empty for the origin
 
-        #links for the staubli. the qlims are specific. yay.
-        link1 = DHLink(d=0.375, a=0, alpha=pi/2, qlim=[-pi, pi]) #0.375 from sheet, lines up with stl now mesh transforms are right
-        link2 = DHLink(d=0, a=0.29, alpha=0, qlim=[-127.5*pi/180 + pi/2, 127.5*pi/180 + pi/2]) #datasheet +-127.5 is from the staubli zero (arm straight up), which is q2 = +90 deg in my DH, so shift by +90
-        link3 = DHLink(d=-0.02, a=0, alpha=-pi/2, qlim=[-142.5*pi/180 - pi/2, 142.5*pi/180 - pi/2]) #negative so offset is same side as stl. datasheet +-142.5 from the staubli zero = q3 -90 deg in my DH, so shift by -90
-        link4 = DHLink(d=0.31, a=0, alpha=pi/2, qlim=[-270*pi/180, 270*pi/180])
-        link5 = DHLink(d=0, a=0, alpha=-pi/2, qlim=[-121*pi/180, 132.5*pi/180])
-        link6 = DHLink(d=0.07, a=0, alpha=0, qlim=[-270*pi/180, 270*pi/180])
+        # DH links (standard DH: d along z, a along x, alpha = twist between joints). no joint offsets, so q = 0 is an L shape
+        # qlims: datasheet ranges are measured from the staubli zero (arm straight up). straight up is q2 = +90, q3 = -90 in my DH, so those two are shifted
+        link1 = DHLink(d=0.375, a=0, alpha=pi/2, qlim=[-pi, pi]) #base height 375 mm (shoulder above the base). +-180
+        link2 = DHLink(d=0, a=0.29, alpha=0, qlim=[-127.5*pi/180 + pi/2, 127.5*pi/180 + pi/2]) #upper arm 290 mm. +-127.5 from straight up, shifted +90
+        link3 = DHLink(d=-0.02, a=0, alpha=-pi/2, qlim=[-142.5*pi/180 - pi/2, 142.5*pi/180 - pi/2]) #20 mm elbow offset, negative so it's on the same side as the stl. +-142.5 shifted -90
+        link4 = DHLink(d=0.31, a=0, alpha=pi/2, qlim=[-270*pi/180, 270*pi/180]) #forearm 310 mm (elbow to wrist centre). +-270
+        link5 = DHLink(d=0, a=0, alpha=-pi/2, qlim=[-121*pi/180, 132.5*pi/180]) #wrist bend, no length (spherical wrist). -121 / +132.5, not symmetric on the datasheet
+        link6 = DHLink(d=0.07, a=0, alpha=0, qlim=[-270*pi/180, 270*pi/180]) #wrist centre to flange 70 mm. +-270
 
         self.robot = DHRobot([link1, link2, link3, link4, link5, link6], name='Staubli TX60')
-        self.home_q = [0, pi/2, -pi/2, 0, 0, 0] #vertical pose, same as the stls
+        self.home_q = [0, pi/2, -pi/2, 0, 0, 0] #straight up, same pose as the stls. it's a singularity (wrist and arm lined up), so RMRC never starts from here, IK to a pose first
         if base is not None:
             self.robot.base = base
 
-        #mesh attached to robot inspired by the pen mesh import in week 4
+        #stls are the ros-industrial TX60 meshes. loading them like the pen mesh in week 4
         mesh_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Staubli Robot Files")
 
-        #offsets for each stl, same order as the files below
+        #offsets: where each stl sits relative to its DH frame. each mesh is drawn at fkine_all(q)[i] @ offsets[i] every step
+        #worked out by putting the robot in the vertical pose and lining each stl up with its link
         mesh_files = ["base_link.stl", "link_1.stl", "link_2.stl", "link_3.stl", "link_4.stl", "link_5.stl", "link_6.stl"]
         self.offsets = [np.eye(4), #base link, no transform needed
-                        trotx(-pi/2), #link 1
-                        transl(-0.29, 0, 0) @ trotz(-pi/2) @ trotx(-pi/2), #link 2. dh frame is at elbow, stl origin at shoulder
-                        np.eye(4), #link 3
-                        transl(0, -0.31, 0) @ trotx(-pi/2), #link 4. according to the schematics, its at the wrist point so it needs to be translatsed and offset. 4th adjustment. 0-.25, -0.3, -0.325. -0.32.
-                        np.eye(4), #link 5
-                        np.eye(4)] #link 6. no transform needed, lines up already
+                        trotx(-pi/2), #link 1. DH frame 1 is twisted 90 deg (alpha = pi/2), stl isn't, so rotate it back
+                        transl(-0.29, 0, 0) @ trotz(-pi/2) @ trotx(-pi/2), #link 2. DH frame is at the elbow but the stl origin is at the shoulder, so step back the 290 mm then rotate
+                        np.eye(4), #link 3. lines up already
+                        transl(0, -0.31, 0) @ trotx(-pi/2), #link 4. DH frame is at the wrist but the stl origin is at the elbow, so step back the 310 mm then rotate
+                        np.eye(4), #link 5. lines up already
+                        np.eye(4)] #link 6. lines up already
 
         #the OO mover does link_check[i].A @ offsets[i] for each mesh every step, so these two lists have to be in the same order
         self.meshes = []
