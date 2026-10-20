@@ -15,14 +15,14 @@ class StaubliTX60:
         # DH links (standard DH: d along z, a along x, alpha = twist between joints). no joint offsets, so q = 0 is an L shape
         # qlims: datasheet ranges are measured from the staubli zero (arm straight up). straight up is q2 = +90, q3 = -90 in my DH, so those two are shifted
         link1 = DHLink(d=0.375, a=0, alpha=pi/2, qlim=[-pi, pi]) #base height 375 mm (shoulder above the base). +-180
-        link2 = DHLink(d=0, a=0.29, alpha=0, qlim=[-127.5*pi/180 + pi/2, 127.5*pi/180 + pi/2]) #upper arm 290 mm. +-127.5 from straight up, shifted +90
-        link3 = DHLink(d=-0.02, a=0, alpha=-pi/2, qlim=[-142.5*pi/180 - pi/2, 142.5*pi/180 - pi/2]) #20 mm elbow offset, negative so it's on the same side as the stl. +-142.5 shifted -90
+        link2 = DHLink(d=0, a=0.29, alpha=0, qlim=[-127.5*pi/180, 127.5*pi/180], offset=pi/2) #upper arm 290 mm. +-127.5 from straight up, shifted +90
+        link3 = DHLink(d=-0.02, a=0, alpha=-pi/2, qlim=[-142.5*pi/180, 142.5*pi/180], offset=-pi/2) #20 mm elbow offset, negative so it's on the same side as the stl. +-142.5 shifted -90
         link4 = DHLink(d=0.31, a=0, alpha=pi/2, qlim=[-270*pi/180, 270*pi/180]) #forearm 310 mm (elbow to wrist centre). +-270
         link5 = DHLink(d=0, a=0, alpha=-pi/2, qlim=[-121*pi/180, 132.5*pi/180]) #wrist bend, no length (spherical wrist). -121 / +132.5, not symmetric on the datasheet
         link6 = DHLink(d=0.07, a=0, alpha=0, qlim=[-270*pi/180, 270*pi/180]) #wrist centre to flange 70 mm. +-270
 
         self.robot = DHRobot([link1, link2, link3, link4, link5, link6], name='Staubli TX60')
-        self.home_q = [0, pi/2, -pi/2, 0, 0, 0] #straight up, same pose as the stls. it's a singularity (wrist and arm lined up), so RMRC never starts from here, IK to a pose first
+        self.home_q = [0, 0, 0, 0, 0, 0] #straight up, same pose as the stls. it's a singularity (wrist and arm lined up), so RMRC never starts from here, IK to a pose first
         if base is not None:
             self.robot.base = base
 
