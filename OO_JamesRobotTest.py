@@ -31,8 +31,8 @@ class ABBIRB140:
 
 
         link1 = DHLink(d=0.352, a=0.07, alpha=-pi/2, qlim=[-pi, pi])
-        link2 = DHLink(d=0.0,   a=0.36, alpha=0, offset=-pi/2, qlim=[-100*pi/180, 100*pi/180])
-        link3 = DHLink(d=0.0,   a=0.0,  alpha=-pi/2, qlim=[-235*pi/180, 45*pi/180])
+        link2 = DHLink(d=0.0,   a=0.36, alpha=0, qlim=[-100*pi/180, 100*pi/180], offset=-pi/2)
+        link3 = DHLink(d=0.0,   a=0.0,  alpha=-pi/2, qlim=[-140*pi/180, 140*pi/180], offset=-pi/2)
         link4 = DHLink(d=0.38,  a=0.0,  alpha=pi/2,  qlim=[-200*pi/180, 200*pi/180])
         link5 = DHLink(d=0.0,   a=0.0,  alpha=-pi/2, qlim=[-120*pi/180, 120*pi/180])
         link6 = DHLink(d=0.065, a=0.0,  alpha=0,     qlim=[-400*pi/180, 400*pi/180])
@@ -50,7 +50,7 @@ class ABBIRB140:
             self.robot.base = base                       # yes: move the whole robot there
 
         # -- Block 4: home pose --
-        self.home_q = [0, 0, -pi/2, 0, 0, 0]          # vertical pose, same as the STLs
+        self.home_q = [0, 0, 0, 0, 0, 0]          # vertical pose, same as the STLs
 
         # -- Block 5: load the STL meshes --
         # Overview: finds the STL folder next to this file, then loads the
