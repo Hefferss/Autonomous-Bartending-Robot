@@ -5,6 +5,19 @@ from spatialmath import SE3
 from spatialmath.base import troty, trotz
 from ir_support_extra_parts.parts import part_mesh #estop and safety man from A1
 
+# storage table layout: ONE row across the front of the table (table is x -0.5 to 1.0, y -0.5 to 0.0)
+# every item's centre sits on y = ROW_Y and they are spread along x with equal gaps (about 7 cm between neighbouring edges)
+# OO_MainV2.py imports these so the pickup points always match where the items really are. to move an item, change it here only
+ROW_Y = -0.15
+UMBRELLA_X = -0.353 # umbrella pot (the umbrella sits in it)
+GLASS_X = -0.173
+SHAKER_X = 0.049
+LEMON_X = 0.231
+BETTER_LEMON_X = 0.338
+COINTREAU_X = 0.457
+COGNAC_X = 0.609
+LID_X = 0.814
+
 #all the bar objects from MainRobotSimFile.py but class (object orientated):) each one is kept as self.something so the robots can grab them later
 class BarScene:
     def __init__(self, env): #env has to be launched already, so make this AFTER workcell.launch()
@@ -13,19 +26,19 @@ class BarScene:
         #cognac scene load
         cognac_location = os.path.join(item_folder, "Cognac.stl")
         self.cognac_scene = Mesh(filename=cognac_location, color="#2B1506", scale=[0.001, 0.001, 0.001])
-        self.cognac_scene.T = SE3(0.3, -0.25, 0.375) 
+        self.cognac_scene.T = SE3(COGNAC_X, ROW_Y - 0.153, 0.375) # STL origin is 0.153 behind (-y) of the bottle's middle 
         env.add(self.cognac_scene)
 
         #cointreau.stl
         cointreau_location = os.path.join(item_folder, "Cointreau.stl")
         self.cointreau_scene = Mesh(filename=cointreau_location, color="#FFBD17FF", scale=[0.02, 0.02, 0.02])
-        self.cointreau_scene.T = SE3(0.3, -0.2, 0.25)
+        self.cointreau_scene.T = SE3(COINTREAU_X, ROW_Y, 0.25)
         env.add(self.cointreau_scene)
 
         #lemonSlice.stl 
         lemon_location = os.path.join(item_folder, "Lemon.stl")
         self.lemon_scene = Mesh(filename=lemon_location, color="#F7F7A1")
-        self.lemon_scene.T = SE3(0.22, -0.2, 0.255) * troty(pi/2) # lemon slice lying on the table (no pot)
+        self.lemon_scene.T = SE3(LEMON_X, ROW_Y + 0.01, 0.255) * troty(pi/2) # lemon slice lying on the table (no pot)
         env.add(self.lemon_scene)
 
         #BarTableRobot.stl
@@ -49,7 +62,7 @@ class BarScene:
         #BetterLemon.stl
         Better_lemon_location = os.path.join(item_folder, "BetterLemon.stl")
         self.Better_lemon_scene = Mesh(filename=Better_lemon_location, color="#FFFF00", scale=[0.001, 0.001, 0.001])
-        self.Better_lemon_scene.T = SE3(0.2, -0.2, 0.25) * troty(pi/2) # half lemon sitting on the table (no pot)
+        self.Better_lemon_scene.T = SE3(BETTER_LEMON_X - 0.015, ROW_Y, 0.25) * troty(pi/2) # half lemon sitting on the table (no pot)
         env.add(self.Better_lemon_scene)
 
         #UR3 rail
@@ -61,32 +74,32 @@ class BarScene:
         #cocktail glass
         cocktail_glass_location = os.path.join(item_folder, "CocktailGlass.stl")
         self.cocktail_glass_scene = Mesh(filename=cocktail_glass_location, color="#FFFFFF", scale=[0.001, 0.001, 0.001])
-        self.cocktail_glass_scene.T = SE3(-0.2, -0.1, 0.255)
+        self.cocktail_glass_scene.T = SE3(GLASS_X, ROW_Y, 0.255)
         env.add(self.cocktail_glass_scene)
 
         #cocktail shaker
         cocktail_shaker_location = os.path.join(item_folder, "CocktailShaker.stl")
         self.cocktail_shaker_scene = Mesh(filename=cocktail_shaker_location, color="#504E4E", scale=[0.001, 0.001, 0.001])
-        self.cocktail_shaker_scene.T = SE3(0, -0.2, 0.255)
+        self.cocktail_shaker_scene.T = SE3(SHAKER_X, ROW_Y, 0.255)
         env.add(self.cocktail_shaker_scene)
 
         #Umbrella pot
         Umbrella_pot_location = os.path.join(item_folder, "UmbrellaPot.stl")
         self.Umbrella_pot_scene = Mesh(filename=Umbrella_pot_location, color="#504E4E", scale=[0.001, 0.001, 0.001])
-        self.Umbrella_pot_scene.T = SE3(-0.2, -0.3, 0.255)
+        self.Umbrella_pot_scene.T = SE3(UMBRELLA_X, ROW_Y, 0.255)
         env.add(self.Umbrella_pot_scene)
 
         #Umbrella 
         Umbrella_location = os.path.join(item_folder, "Umbrella.stl")
         self.Umbrella_scene = Mesh(filename=Umbrella_location, color="#33DED8", scale=[0.001, 0.001, 0.001])
-        self.Umbrella_scene.T = SE3(-0.2, -0.3, 0.255) * trotz(pi/2)
+        self.Umbrella_scene.T = SE3(UMBRELLA_X, ROW_Y, 0.255) * trotz(pi/2)
         env.add(self.Umbrella_scene)
 
 
         #cocktail shaker lid, STL is modelled sitting on the shaker so drop it 0.21 to sit on the table
         cocktail_shaker_lid_location = os.path.join(item_folder, "CocktailShakerLid.stl")
         self.cocktail_shaker_lid_scene = Mesh(filename=cocktail_shaker_lid_location, color="#504E4E", scale=[0.001, 0.001, 0.001])
-        self.cocktail_shaker_lid_scene.T = SE3(0.7, -0.25, 0.045)
+        self.cocktail_shaker_lid_scene.T = SE3(LID_X, ROW_Y, 0.045)
         env.add(self.cocktail_shaker_lid_scene)
 
         #safety tape (1m long pieces) - taped box from x -2 to 3, y -1 to 2

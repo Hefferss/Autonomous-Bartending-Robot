@@ -6,26 +6,26 @@ from OO_WillRobotTest import KawasakiRS007N
 from OO_JamesRobotTest import ABBIRB140
 from OO_JackRobotTest import StaubliTX60
 from OO_UR3 import UR3Robot
-from OO_Scene_Objects import BarScene
+from OO_Scene_Objects import BarScene, ROW_Y, SHAKER_X, LID_X, GLASS_X, UMBRELLA_X, COGNAC_X, COINTREAU_X # where the items sit (the row on the storage table)
 from math import pi
 import numpy as np 
 
 
 # where the EE goes to grab the shaker (its top). shaker is 0.21 tall, tables are 0.25 high
-SHAKER_STORAGE = (-0.08, -0.2, 0.465)
-SHAKER_START = SE3(0, -0.2, 0.255) # where the shaker sits when the scene starts (same as OO_Scene_Objects.py)
+SHAKER_PICKUP = (SHAKER_X - 0.08, ROW_Y, 0.465)
+SHAKER_START = SE3(SHAKER_X, ROW_Y, 0.255) # where the shaker sits when the scene starts (same as OO_Scene_Objects.py)
 SHAKER_TOP = 0.465 # top of the shaker when it's sitting on any table
 WILL_DROP_ZONE = (0.85, 0.45) # UR3 leaves things here for will. front of the (stretched) robot table
 WILL_SHAKER_SPOT = (0.48, 0.42) # will keeps the shaker here to pour into. was (0.72, 0.62): too close to his base to carry it on to jack without his elbow flipping
 JACK_DROP_ZONE = (0.35, 0.45) # will leaves the shaker here for jack
 JACK_DROP_LID = (0.43, 0.45) # will leaves the shaker here for jack
-GLASS_GRAB = (-0.2, -0.1, 0.38) # top of the cocktail glass on the storage table (0.125 tall)
+GLASS_PICKUP = (GLASS_X, ROW_Y, 0.38) # top of the cocktail glass on the storage table (0.125 tall)
 JAMES_GLASS_SPOT = (-0.7, 0.45) # UR3 leaves the glass here for james
 UR3_JAMES_WAIT_X = 0.3 # where the UR3 waits on the rail while james works
 JAMES_LID_SPOT = (-0.45, 0.65, 0.267) # james puts the lid down here (lid top on the table), behind the shaker
 JAMES_POUR_HEIGHT = 0.62 # james holds the shaker rim this high over the glass, so the shaker clears the glass before tipping
 JAMES_TILT = 2.1 # how far james tips the shaker (rad, ~120 deg)
-UMBRELLA_GRAB = (-0.2, -0.3, 0.341) # top of the umbrella in its pot on the storage table (0.086 tall)
+UMBRELLA_PICKUP = (UMBRELLA_X, ROW_Y, 0.341) # top of the umbrella in its pot on the storage table (0.086 tall)
 JAMES_UMBRELLA_SPOT = (-0.9, 0.45) # UR3 leaves the umbrella here for james
 SENSORS_TABLE_SPOT = (1.75, 0.1) # UR3 puts the finished cocktail here on the SensorsTable (x 1.6 to 2.1)
 UR3_SENSORS_X = 1.4 # UR3 rail position for reaching the SensorsTable
@@ -34,28 +34,28 @@ UMBRELLA_IN_GLASS = 0.416 # umbrella top once james sets it in the glass (its ba
 SHAKE_STROKE = 0.06 # jack's shake goes this far up and down (m)
 JACK_TEST_Q = [30, 60, -40, 0, 30, 0] # test pose for the marker just in case
 JAMES_DROP_ZONE = (-0.45, 0.45) # jack leaves the shaker (lid on) here for james. between their bases, both can reach it
-LID_STORAGE = (0.7, -0.25, 0.267) # top of the lid on the storage table (lid is 12 mm thick)
-LID_START = SE3(0.7, -0.25, 0.045) # where the lid sits when the scene starts (same as OO_Scene_Objects.py)
+LID_PICKUP = (LID_X, ROW_Y, 0.267) # top of the lid on the storage table (lid is 12 mm thick)
+LID_START = SE3(LID_X, ROW_Y, 0.045) # where the lid sits when the scene starts (same as OO_Scene_Objects.py)
 LID_DROP = (-0.3, 0.45, 0.267) # UR3 leaves the lid here for jack
 LID_ON_SHAKER = 0.477 # top of the lid once it's on the shaker
 
 # ingredients will pours into the shaker. grab = top of the item on the storage table
-COGNAC_GRAB = (0.3, -0.097, 0.503) # cognac STL origin is off centre, its middle is at y -0.097. 0.256 tall
-COINTREAU_GRAB = (0.3, -0.2, 0.409) # 0.159 tall
-SHAKER_GRAB_OFFSET = SHAKER_START.t[0] - SHAKER_STORAGE[0] # shaker is grabbed by its edge, its centre is this far +x of the grab point
+COGNAC_PICKUP = (COGNAC_X, ROW_Y, 0.503) # top of the cognac (its middle is on the row). 0.256 tall
+COINTREAU_PICKUP = (COINTREAU_X, ROW_Y, 0.409) # 0.159 tall
+SHAKER_GRAB_OFFSET = SHAKER_START.t[0] - SHAKER_PICKUP[0] # shaker is grabbed by its edge, its centre is this far +x of the grab point
 LEMON_DROP_ZONE = (0.85, 0.55) # UR3 leaves the cointreau here (will can't reach low enough at WILL_DROP_ZONE for it)
 UR3_WAIT_X = -0.3 # where the UR3 waits on the rail while will works (clear of his pours at x 0.5)
 SHAKER_POUR_SPOT = (WILL_SHAKER_SPOT[0] + SHAKER_GRAB_OFFSET, WILL_SHAKER_SPOT[1], SHAKER_TOP) # top centre of the shaker on will's spot
 
 # UR3 brings one bottle to will, will grabs it by the neck and pours it into the shaker, UR3 puts it back
 #   length = how tall it is, drop_xy = where the UR3 leaves it for will
-def will_pours(workcell, ur3_setup, item, grab, length, drop_xy):
+def will_pours(workcell, ur3_setup, item, pickup, length, drop_xy):
     ur3 = workcell.movers["UR3"]
     will = workcell.movers["Will's Robot"]
-    drop = (*drop_xy, grab[2]) # UR3 holds it by the top. same height as on the storage table (both tables are 0.25 high)
+    drop = (*drop_xy, pickup[2]) # UR3 holds it by the top. same height as on the storage table (both tables are 0.25 high)
 
-    ur3_setup.move_base(ur3, grab[0]) # UR3 fetches it
-    ur3.pick_drop(grab, item)
+    ur3_setup.move_base(ur3, pickup[0]) # UR3 fetches it
+    ur3.pick_drop(pickup, item)
     ur3.tuck()
     ur3_setup.move_base(ur3, drop_xy[0])
     ur3.pick_drop(drop) # leaves it in will's drop zone
@@ -68,8 +68,8 @@ def will_pours(workcell, ur3_setup, item, grab, length, drop_xy):
     ur3_setup.move_base(ur3, drop_xy[0])
     ur3.pick_drop(drop, item) # UR3 takes it back to where it started
     ur3.tuck()
-    ur3_setup.move_base(ur3, grab[0])
-    ur3.pick_drop(grab)
+    ur3_setup.move_base(ur3, pickup[0])
+    ur3.pick_drop(pickup)
     ur3.tuck()
 
 
@@ -92,8 +92,8 @@ def will_part(workcell, scene, ur3_setup):
     for item in (scene.cognac_scene, scene.cointreau_scene, scene.Better_lemon_scene): # ingredients back to their start
         item.T = scene.start_poses[item].copy()
 
-    ur3_setup.move_base(ur3, SHAKER_STORAGE[0]) # slide to the shaker
-    ur3.pick_drop(SHAKER_STORAGE, shaker) # grab it
+    ur3_setup.move_base(ur3, SHAKER_PICKUP[0]) # slide to the shaker
+    ur3.pick_drop(SHAKER_PICKUP, shaker) # grab it
     ur3.tuck() # UR3 pulls back over the rail so it's out of the way
     ur3_setup.move_base(ur3, WILL_DROP_ZONE[0]) # slide over to will
     ur3.pick_drop((*WILL_DROP_ZONE, SHAKER_TOP)) # put it in his drop off zone
@@ -104,11 +104,11 @@ def will_part(workcell, scene, ur3_setup):
     will.move_to_q((0.8, pi/2, -pi/2, 0.5, 7, 3)) # will stands back up
 
     # will pours the ingredients into the shaker: (item, UR3 grab spot, height, drop spot). lemon is off: too low for will without his arm going through itself
-    for item, grab, length, drop_xy in [(scene.cognac_scene, COGNAC_GRAB, 0.256, WILL_DROP_ZONE),
-                                        (scene.cointreau_scene, COINTREAU_GRAB, 0.159, LEMON_DROP_ZONE)]:
+    for item, pickup, length, drop_xy in [(scene.cognac_scene, COGNAC_PICKUP, 0.256, WILL_DROP_ZONE),
+                                        (scene.cointreau_scene, COINTREAU_PICKUP, 0.159, LEMON_DROP_ZONE)]:
         if workcell.state != "RUNNING": # e-stop: skip the rest
             return
-        will_pours(workcell, ur3_setup, item, grab, length, drop_xy)
+        will_pours(workcell, ur3_setup, item, pickup, length, drop_xy)
 
     # will passes the shaker to jack: RMRC up and down, one short joint move across in the same arm shape
     will.carry((*WILL_SHAKER_SPOT, SHAKER_TOP), (*JACK_DROP_ZONE, SHAKER_TOP), shaker) # hand off: the shaker is now down for jack
@@ -128,8 +128,8 @@ def jack_part(workcell, scene, ur3_setup):
     shaker.T = SE3(JACK_DROP_ZONE[0] + SHAKER_GRAB_OFFSET, JACK_DROP_ZONE[1], 0.255) # shaker where will leaves it, so jack's button works on its own too
     lid.T = LID_START # lid back in storage for the UR3 to fetch
 
-    ur3_setup.move_base(ur3, LID_STORAGE[0]) # UR3 fetches the lid for jack
-    ur3.pick_drop(LID_STORAGE, lid) # grabs the lid at its top surface, straight down (same as jack's)
+    ur3_setup.move_base(ur3, LID_PICKUP[0]) # UR3 fetches the lid for jack
+    ur3.pick_drop(LID_PICKUP, lid) # grabs the lid at its top surface, straight down (same as jack's)
     ur3.tuck()
     ur3_setup.move_base(ur3, LID_DROP[0])
     ur3.pick_drop(LID_DROP)
@@ -173,11 +173,11 @@ def james_part(workcell, scene, ur3_setup):
     shaker.T = SE3(*JAMES_DROP_ZONE, 0.255) # shaker + lid where jack leaves them, so james' button works on its own too
     lid.T = SE3(*JAMES_DROP_ZONE, 0.255) # (the lid stl's origin is at the shaker's base)
 
-    ur3_setup.move_base(ur3, GLASS_GRAB[0]) # UR3 fetches the glass for james
-    ur3.pick_drop(GLASS_GRAB, glass)
+    ur3_setup.move_base(ur3, GLASS_PICKUP[0]) # UR3 fetches the glass for james
+    ur3.pick_drop(GLASS_PICKUP, glass)
     ur3.tuck()
     ur3_setup.move_base(ur3, JAMES_GLASS_SPOT[0])
-    ur3.pick_drop((*JAMES_GLASS_SPOT, GLASS_GRAB[2]))
+    ur3.pick_drop((*JAMES_GLASS_SPOT, GLASS_PICKUP[2]))
     ur3.tuck()
     ur3_setup.move_base(ur3, UR3_JAMES_WAIT_X) # out of james' way
 
@@ -194,22 +194,22 @@ def james_part(workcell, scene, ur3_setup):
     jam.pick_drop(shaker_rim) # shaker back where it was
     jam.move_to_q(jam.home_q)
 
-    ur3_setup.move_base(ur3, UMBRELLA_GRAB[0]) # UR3 fetches the umbrella for james
-    ur3.pick_drop(UMBRELLA_GRAB, umbrella)
+    ur3_setup.move_base(ur3, UMBRELLA_PICKUP[0]) # UR3 fetches the umbrella for james
+    ur3.pick_drop(UMBRELLA_PICKUP, umbrella)
     ur3.tuck()
     ur3_setup.move_base(ur3, JAMES_UMBRELLA_SPOT[0])
-    ur3.pick_drop((*JAMES_UMBRELLA_SPOT, UMBRELLA_GRAB[2]))
+    ur3.pick_drop((*JAMES_UMBRELLA_SPOT, UMBRELLA_PICKUP[2]))
     ur3.tuck()
     ur3_setup.move_base(ur3, UR3_JAMES_WAIT_X)
-    jam.pick_drop((*JAMES_UMBRELLA_SPOT, UMBRELLA_GRAB[2]), umbrella) # james puts the umbrella in the glass
+    jam.pick_drop((*JAMES_UMBRELLA_SPOT, UMBRELLA_PICKUP[2]), umbrella) # james puts the umbrella in the glass
     jam.pick_drop((*JAMES_GLASS_SPOT, UMBRELLA_IN_GLASS))
     jam.move_to_q(jam.home_q)
 
     ur3_setup.move_base(ur3, JAMES_GLASS_SPOT[0]) # UR3 takes the finished cocktail to the SensorsTable
-    ur3.pick_drop((JAMES_GLASS_SPOT[0], JAMES_GLASS_SPOT[1] - GLASS_RIM_GRAB, GLASS_GRAB[2]), [glass, umbrella])
+    ur3.pick_drop((JAMES_GLASS_SPOT[0], JAMES_GLASS_SPOT[1] - GLASS_RIM_GRAB, GLASS_PICKUP[2]), [glass, umbrella])
     ur3.tuck()
     ur3_setup.move_base(ur3, UR3_SENSORS_X)
-    ur3.pick_drop((SENSORS_TABLE_SPOT[0], SENSORS_TABLE_SPOT[1] - GLASS_RIM_GRAB, GLASS_GRAB[2]))
+    ur3.pick_drop((SENSORS_TABLE_SPOT[0], SENSORS_TABLE_SPOT[1] - GLASS_RIM_GRAB, GLASS_PICKUP[2]))
     ur3.tuck()
 
 
