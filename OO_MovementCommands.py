@@ -233,6 +233,10 @@ class RobotMover:
     def tuck(self):
         return self.move_to_q([-pi/2, -pi/2, pi/2, -pi/2, -pi/2, 0])
 
+        # transport: Same as tuck but moves into spot where bottles wont knock eachother over, useful for when picking up and moving bottles
+    def transport(self):
+        return self.move_to_q([0, -pi/2, pi/2, -pi/2, -pi/2, 0])
+
     # wait: holds still for a few steps (e.g. while pouring). workcell.step so the e-stop still works. false if e-stopped
     def wait(self, steps=20):
         for i in range(steps):

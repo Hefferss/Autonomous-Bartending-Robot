@@ -56,7 +56,7 @@ def will_pours(workcell, ur3_setup, item, pickup, length, drop_xy):
 
     ur3_setup.move_base(ur3, pickup[0]) # UR3 fetches it
     ur3.pick_drop(pickup, item)
-    ur3.tuck()
+    ur3.transport()
     ur3_setup.move_base(ur3, drop_xy[0])
     ur3.pick_drop(drop) # leaves it in will's drop zone
     ur3.tuck()
@@ -67,10 +67,10 @@ def will_pours(workcell, ur3_setup, item, pickup, length, drop_xy):
 
     ur3_setup.move_base(ur3, drop_xy[0])
     ur3.pick_drop(drop, item) # UR3 takes it back to where it started
-    ur3.tuck()
+    ur3.transport()
     ur3_setup.move_base(ur3, pickup[0])
     ur3.pick_drop(pickup)
-    ur3.tuck()
+    ur3.transport()
 
 
 # will's part: UR3 brings the shaker, will moves it and puts it down at jack's drop zone (the hand off to jack)
@@ -94,7 +94,7 @@ def will_part(workcell, scene, ur3_setup):
 
     ur3_setup.move_base(ur3, SHAKER_PICKUP[0]) # slide to the shaker
     ur3.pick_drop(SHAKER_PICKUP, shaker) # grab it
-    ur3.tuck() # UR3 pulls back over the rail so it's out of the way
+    ur3.transport() # UR3 pulls back over the rail so it's out of the way
     ur3_setup.move_base(ur3, WILL_DROP_ZONE[0]) # slide over to will
     ur3.pick_drop((*WILL_DROP_ZONE, SHAKER_TOP)) # put it in his drop off zone
     ur3.tuck() # get out of the way before will reaches in
