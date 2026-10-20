@@ -33,11 +33,14 @@ class KawasakiRS007N:
         # The DH Paramaters were inferred using the Alpha from Jack's robot as they're very similar
         # The d and a values were taken from the manual and confirmed after trial and error
         link1 = DHLink(d=0.36,  a=0,     alpha=pi/2,  qlim=[-180*pi/180, 180*pi/180])  # JT1 Arm Rotation
-        link2 = DHLink(d=0,     a=0.355, alpha=0,     qlim=[-135*pi/180, 135*pi/180])  # JT2 Arm Out-in
-        link3 = DHLink(d=0,     a=0,     alpha=-pi/2, qlim=[-155*pi/180, 155*pi/180])  # JT3 Arm Up-down
+        link2 = DHLink(d=0,     a=0.355, alpha=0,     qlim=[-135*pi/180, 135*pi/180], offset=pi/2)  # JT2 Arm Out-in
+        link3 = DHLink(d=0,     a=0,     alpha=-pi/2, qlim=[-155*pi/180, 155*pi/180], offset=-pi/2)  # JT3 Arm Up-down
         link4 = DHLink(d=0.375, a=0,     alpha=pi/2,  qlim=[-200*pi/180, 200*pi/180])  # JT4 Wrist Swivel
         link5 = DHLink(d=0,     a=0,     alpha=-pi/2, qlim=[-125*pi/180, 125*pi/180])  # JT5 Wrist Bend
         link6 = DHLink(d=0.078, a=0,     alpha=0,     qlim=[-360*pi/180, 360*pi/180])  # JT6 Wrist Twist
+
+        #link2 = DHLink(d=0,     a=0.355, alpha=0,     qlim=[-135*pi/180, 135*pi/180], offset=pi/2)  # JT2 Arm Out-in - Offset required for correct joint limits of standing up robot
+        #link3 = DHLink(d=0,     a=0,     alpha=-pi/2, qlim=[-155*pi/180, 155*pi/180], offset=-pi/2)  # JT3 Arm Up-down
 
         # The self. prefix is what allows us to share the functions in the other files between robots using OO Programming
         # When an instance of this robot is created the its name may be different but the .robot spec remains the same
@@ -53,7 +56,7 @@ class KawasakiRS007N:
 
         # This is the home pose. Really its a starting pose now but its inherited from previous versions where
         # it was required to make robot stand up straight for testing. Now it is a required part of constructor for the starting pose
-        self.home_q = [0, pi/2, -pi/2, 0, 0, 0]     #Vertical pose by default
+        self.home_q = [0, 0, 0, 0, 0, 0]     #Vertical Pose
 
         # This is just a neater way of expressing the previous code where it would each had 4 lines for each mesh its doing the same function
         # it finds the mesh folder for the robot, iterates through each stl link file name in this case wlink for Will's link, and adds to a list that
