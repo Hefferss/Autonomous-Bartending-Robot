@@ -11,7 +11,7 @@ from OO_Camera import CAMERA_ANGLES
 class RobotGUI:
 
     # scenes: button label -> function to run (see OO_MainV2.py). jog_step in metres
-    def __init__(self, workcell, jog_step=0.02, beacon_position=(0, 0, 1.5), camera_angles=None, scenes=None):
+    def __init__(self, workcell, jog_step=0.02, beacon_position=(-1.5, 2.3, 1.2), camera_angles=None, scenes=None):
         self.workcell = workcell
         self.scenes = scenes or {}
         self.jog_step = jog_step

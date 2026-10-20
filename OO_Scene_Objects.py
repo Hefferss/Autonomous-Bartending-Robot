@@ -117,10 +117,14 @@ class BarScene:
 
         #Estop, just outside the front tape
         self.estop = part_mesh("EmergencyStopButton")
-        self.estop.T = SE3(-1.5, 2.1, 0)
+        self.estop.T = SE3(-1.5, 2.3, 0.6)
         env.add(self.estop)
 
         #Safety Man, standing next to the estop
         self.safety_man = part_mesh("SafetyPerson")
         self.safety_man.T = SE3(-1.0, 2.4, 0) * SE3.Rz(pi/2)
         env.add(self.safety_man)
+        
+        self.ctable = part_mesh("SimpleTable")
+        self.ctable.T = SE3(-1.5, 2.3, 0)
+        env.add(self.ctable)
