@@ -12,13 +12,13 @@ class BarScene:
 
         #cognac scene load
         cognac_location = os.path.join(item_folder, "Cognac.stl")
-        self.cognac_scene = Mesh(filename=cognac_location, color="#522B0F", scale=[0.001, 0.001, 0.001])
+        self.cognac_scene = Mesh(filename=cognac_location, color="#2B1506", scale=[0.001, 0.001, 0.001])
         self.cognac_scene.T = SE3(0.3, -0.25, 0.375) 
         env.add(self.cognac_scene)
 
         #cointreau.stl
         cointreau_location = os.path.join(item_folder, "Cointreau.stl")
-        self.cointreau_scene = Mesh(filename=cointreau_location, color="#C47C07", scale=[0.02, 0.02, 0.02])
+        self.cointreau_scene = Mesh(filename=cointreau_location, color="#FFBD17FF", scale=[0.02, 0.02, 0.02])
         self.cointreau_scene.T = SE3(0.3, -0.2, 0.25)
         env.add(self.cointreau_scene)
 
@@ -30,25 +30,25 @@ class BarScene:
 
         #BarTableRobot.stl
         bar_table_location = os.path.join(item_folder, "BarTableRobot.stl")
-        self.bar_table_scene = Mesh(filename=bar_table_location, color="#8B4513", scale=[0.001, 0.0014, 0.001]) # y stretched 1.4x so the front reaches the drop off zones
+        self.bar_table_scene = Mesh(filename=bar_table_location, color="#522B0F", scale=[0.001, 0.0014, 0.001]) # y stretched 1.4x so the front reaches the drop off zones
         self.bar_table_scene.T = SE3(-1.5, 0.3, 0) # front edge moved from y 0.5 to 0.3, back edge stays at 1.0
         env.add(self.bar_table_scene)
 
         #SensorsTable
         sensors_table_location = os.path.join(item_folder, "SensorsTable.stl")
-        self.sensors_table_scene = Mesh(filename=sensors_table_location, color="#8B4513", scale=[0.001, 0.001, 0.001])
+        self.sensors_table_scene = Mesh(filename=sensors_table_location, color="#522B0F", scale=[0.001, 0.001, 0.001])
         self.sensors_table_scene.T = SE3(1.85,0,0) * trotz(pi/2) * SE3(0,0.25,0)
         env.add(self.sensors_table_scene)
 
         #BarTableStorage.stl
         bar_table_storage_location = os.path.join(item_folder, "BarTableStorage.stl")
-        self.bar_table_storage_scene = Mesh(filename=bar_table_storage_location, color="#8B4513", scale=[0.001, 0.001, 0.001])
+        self.bar_table_storage_scene = Mesh(filename=bar_table_storage_location, color="#522B0F", scale=[0.001, 0.001, 0.001])
         self.bar_table_storage_scene.T = SE3(-0.5, -0.5, 0) 
         env.add(self.bar_table_storage_scene)
 
         #BetterLemon.stl
         Better_lemon_location = os.path.join(item_folder, "BetterLemon.stl")
-        self.Better_lemon_scene = Mesh(filename=Better_lemon_location, color="#F7F7A1", scale=[0.001, 0.001, 0.001])
+        self.Better_lemon_scene = Mesh(filename=Better_lemon_location, color="#FFFF00", scale=[0.001, 0.001, 0.001])
         self.Better_lemon_scene.T = SE3(0.2, -0.2, 0.25) * troty(pi/2) # half lemon sitting on the table (no pot)
         env.add(self.Better_lemon_scene)
 
@@ -78,7 +78,7 @@ class BarScene:
 
         #Umbrella 
         Umbrella_location = os.path.join(item_folder, "Umbrella.stl")
-        self.Umbrella_scene = Mesh(filename=Umbrella_location, color="#F601C1", scale=[0.001, 0.001, 0.001])
+        self.Umbrella_scene = Mesh(filename=Umbrella_location, color="#33DED8", scale=[0.001, 0.001, 0.001])
         self.Umbrella_scene.T = SE3(-0.2, -0.3, 0.255) * trotz(pi/2)
         env.add(self.Umbrella_scene)
 
@@ -109,5 +109,5 @@ class BarScene:
 
         #Safety Man, standing next to the estop
         self.safety_man = part_mesh("SafetyPerson")
-        self.safety_man.T = SE3(-1.0, 2.4, 0)
+        self.safety_man.T = SE3(-1.0, 2.4, 0) * SE3.Rz(pi/2)
         env.add(self.safety_man)

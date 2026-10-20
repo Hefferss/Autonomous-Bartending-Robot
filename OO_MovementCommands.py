@@ -231,7 +231,7 @@ class RobotMover:
 
     # tuck: folds the arm up over its own base, out of the way (UR3 tuck pose)
     def tuck(self):
-        return self.move_to_q([0, -pi/2, pi/2, 0, 0, 0])
+        return self.move_to_q([-pi/2, -pi/2, pi/2, -pi/2, -pi/2, 0])
 
     # wait: holds still for a few steps (e.g. while pouring). workcell.step so the e-stop still works. false if e-stopped
     def wait(self, steps=20):

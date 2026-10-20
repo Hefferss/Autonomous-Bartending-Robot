@@ -50,7 +50,7 @@ class ABBIRB140:
             self.robot.base = base                       # yes: move the whole robot there
 
         # -- Block 4: home pose --
-        self.home_q = [0, 0, 0, 0, 0, 0]          # vertical pose, same as the STLs
+        self.home_q = [0, 0, -pi/2, 0, 0, 0]          # vertical pose, same as the STLs
 
         # -- Block 5: load the STL meshes --
         # Overview: finds the STL folder next to this file, then loads the
@@ -61,7 +61,7 @@ class ABBIRB140:
         self.meshes = []                                 # empty list to fill
         for name in file_names:                          # go through each filename
             location = os.path.join(mesh_folder, name)   # full path to the file
-            mesh = Mesh(filename=location, color="#39FF14", scale=[0.001, 0.001, 0.001])  # load it (mm -> m)
+            mesh = Mesh(filename=location, color="#FFAA00", scale=[0.001, 0.001, 0.001])  # load it (mm -> m)
             self.meshes.append(mesh)                     # add it to the list
 
         # -- Block 6: mesh alignment offsets --

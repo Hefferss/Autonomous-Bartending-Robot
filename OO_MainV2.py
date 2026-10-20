@@ -1,5 +1,5 @@
 from spatialmath import SE3
-from spatialmath.base import transl
+from spatialmath.base import transl, trotz
 from OO_MovementCommands import Workcell
 from OO_GUI import RobotGUI
 from OO_WillRobotTest import KawasakiRS007N
@@ -261,7 +261,7 @@ if __name__ == "__main__":
     workcell.add_robot("Jack's Robot", StaubliTX60(base=transl(0, 0.75, 0.25))) # add jacks robot. middle of the robot bar table
     ur3 = UR3Robot(base=transl(0.08, 0.1, 0.25)) # kept as its own variable because the movements need it for the rail
     workcell.add_robot("UR3", ur3) # add the UR3. same spot as MainRobotSimFile
-    workcell.add_robot("Will's Robot", KawasakiRS007N(base=transl(1, 0.75, 0.25))) # add the kawasaki under a name
+    workcell.add_robot("Will's Robot", KawasakiRS007N(base=transl(1, 0.75, 0.25) @ trotz(-pi/2))) # add the kawasaki under a name
     workcell.launch() # open swift and show every robot
     scene = BarScene(workcell.env) # adds all the objects. has to be after launch
     start_poses = save_start_poses(scene) # save where everything starts
