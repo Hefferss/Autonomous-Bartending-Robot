@@ -5,9 +5,8 @@ import swift
 import numpy as np
 from roboticstoolbox import jtraj, trapezoidal
 from spatialmath import SE3       
+from OO_Collision import CollisionChecker
 from math import pi 
-import spatialgeometry as sg
-from OO_Collision import CollisionChecker, EllipsoidZone
 
 TABLE_HEIGHT = 0.25 # top of every table. no robot joint is allowed below this
 TABLE_CLEARANCE = 0.03 # links have thickness, so every joint away from the gripper stays this far above the table
@@ -23,17 +22,6 @@ class Workcell:
         self.movers = {}
         self.inputs = []
         self.collision_on = False
-        self.zones = []
-
-
-    def add_zone(self, centre, radii, color=(0, 0, 0, 0)):
-        zone = EllipsoidZone(centre, radii)
-        visual = sg.Sphere(radius=0.1, pose=SE3(*centre), color=color)
-        visual.scale = list(radii)
-        self.env.add(visual)
-        zone.visual = visual
-        self.zones.append(zone)
-        return zone
 
 
     # add robot function: stores the robot under its name (the name is used in the GUI drop down box)
@@ -155,10 +143,6 @@ class RobotMover:
                 continue
             points = other.checker.link_points(other.robot.q)
             if self.checker.collides(q, points):
-                return True
-        points = self.checker.link_points(q)               # this robot's links as points
-        for zone in self.workcell.zones:
-            if zone.contains(points, margin=self.checker.fatness):
                 return True
         return False
 

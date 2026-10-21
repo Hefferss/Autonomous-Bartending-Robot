@@ -120,15 +120,6 @@ class BarScene:
         self.estop.T = SE3(-1.5, 2.3, 0.6)
         env.add(self.estop)
 
-        # add customer for collisions 
-        self.customer = part_mesh("personMaleCasual")
-        self.customer.scale = [1, 1.5, 0.5]
-        self.customer.T = SE3(2.2, -0.2, 0) * trotz(pi)
-        env.add(self.customer)
-
-        # adding collision to customer mesh
-        # self.customer.pointcloud = 
-
         #Safety Man, standing next to the estop
         self.safety_man = part_mesh("SafetyPerson")
         self.safety_man.T = SE3(-1.0, 2.4, 0) * SE3.Rz(pi/2)

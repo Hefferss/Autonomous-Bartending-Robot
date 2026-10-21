@@ -9,8 +9,6 @@ from OO_UR3 import UR3Robot
 from OO_Scene_Objects import BarScene, ROW_Y, SHAKER_X, LID_X, GLASS_X, UMBRELLA_X, COGNAC_X, COINTREAU_X # where the items sit (the row on the storage table)
 from math import pi
 import numpy as np 
-import spatialgeometry as sg
-from OO_Collision import EllipsoidZone
 
 
 # where the EE goes to grab the shaker (its top). shaker is 0.21 tall, tables are 0.25 high
@@ -267,7 +265,6 @@ if __name__ == "__main__":
     workcell.launch() # open swift and show every robot
     scene = BarScene(workcell.env) # adds all the objects. has to be after launch
     start_poses = save_start_poses(scene) # save where everything starts
-    zone = workcell.add_zone(centre=(1.7, 0.12, 0.6), radii=(0.1, 0.3, 0.1))
     workcell.collision_on = True #every robot checks the other robots before each step (false to turn off)
 
     # scene buttons: label -> function (lambda so it doesn't run straight away)
