@@ -108,3 +108,14 @@ class CollisionChecker:
                 if np.any(np.einsum('ij,jk,ik->i', diff, np.linalg.inv(e['matrix']), diff) <= 1.0):
                     return True
         return False
+
+class EllipsoidZone:
+    # centre = (x, y, z), radii = (rx, ry, rz): half-sizes along world x, y, z
+    def __init__(self, centre, radii):
+        self.centre = np.array(centre, dtype=float)
+        self.radii = np.array(radii, dtype=float)
+
+    # true if any point is inside: (p - c)^T A^-1 (p - c) <= 1 with A = diag(radii^2)
+    def contains(self, points, margin=0.0):
+        diff = np.atleast_2d(points) - self.centre
+        return bool(np.any(np.sum((diff / (self.radii + margin)) ** 2, axis=1) <= 1.0))
