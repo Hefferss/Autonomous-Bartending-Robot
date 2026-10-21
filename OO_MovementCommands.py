@@ -26,7 +26,7 @@ class Workcell:
         self.zones = []
 
 
-    def add_zone(self, centre, radii, color=(1, 0, 0, 0.3)):
+    def add_zone(self, centre, radii, color=(0, 0, 0, 0)):
         zone = EllipsoidZone(centre, radii)
         visual = sg.Sphere(radius=0.1, pose=SE3(*centre), color=color)
         visual.scale = list(radii)

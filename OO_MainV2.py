@@ -267,7 +267,7 @@ if __name__ == "__main__":
     workcell.launch() # open swift and show every robot
     scene = BarScene(workcell.env) # adds all the objects. has to be after launch
     start_poses = save_start_poses(scene) # save where everything starts
-    zone = workcell.add_zone(centre=(1.7, 0.15, 0.6), radii=(0.1, 0.1, 0.1))
+    zone = workcell.add_zone(centre=(1.7, 0.12, 0.6), radii=(0.1, 0.3, 0.1))
     workcell.collision_on = True #every robot checks the other robots before each step (false to turn off)
 
     # scene buttons: label -> function (lambda so it doesn't run straight away)
