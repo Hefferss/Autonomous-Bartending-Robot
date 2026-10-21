@@ -101,7 +101,6 @@ def will_part(workcell, scene, ur3_setup):
     will.pick_drop((*WILL_DROP_ZONE, SHAKER_TOP), shaker) # will picks it up
     will.pick_drop((*WILL_SHAKER_SPOT, SHAKER_TOP)) # and puts it on his shaker spot
     will.move_to_q(will.home_q) # will stands back up
-    will.move_to_q((0.8, pi/2, -pi/2, 0.5, 7, 3)) # will stands back up
 
     # will pours the ingredients into the shaker: (item, UR3 grab spot, height, drop spot). lemon is off: too low for will without his arm going through itself
     for item, pickup, length, drop_xy in [(scene.cognac_scene, COGNAC_PICKUP, 0.256, WILL_DROP_ZONE),
