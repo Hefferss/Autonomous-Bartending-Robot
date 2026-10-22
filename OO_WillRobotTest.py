@@ -66,10 +66,18 @@ class KawasakiRS007N:
         mesh_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Kawasaki_Robot_Files")
         file_names = ["wBase.stl", "wLink1.stl", "wLink2.stl", "wLink3.stl", "wLink4.stl", "wLink5.stl", "wLink6.stl"]
         self.meshes = [] # empty list to fill
-        for name in file_names:                          # go through each filename
-            mesh_path = os.path.join(mesh_folder, name)  # full path to the file
-            mesh = Mesh(filename=mesh_path, color="#B0B0B0FF", scale=[0.001, 0.001, 0.001])  # Swift Assumes unit in metres when its actually meant to be mm hence the conversion
-            self.meshes.append(mesh)                     # add it to the list
+
+        for name in file_names:
+            mesh_path = os.path.join(mesh_folder, name)
+            
+            # Assign black to the end effector (link 6), white to the rest
+            if name == "wLink6.stl":
+                mesh_color = "#1A1A1AFF"  # Black (RGBA hex)
+            else:
+                mesh_color = "#FDFDFDFF"  # Default off-white
+                
+            mesh = Mesh(filename=mesh_path, color=mesh_color, scale=[0.001, 0.001, 0.001])
+            self.meshes.append(mesh)         # add it to the list
 
         # These are the Mesh Offsets obtained by matching with cylinder bot and trial and error. For me (Will) i think it was required because I
         # Dowloaded stp files then used soldiworks to export to stls all at once. This unintentionally kept its locations and meshes 
