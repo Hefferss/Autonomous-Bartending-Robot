@@ -3,6 +3,7 @@
 # obstacles are point clouds: other robots' links (link_points) or a sphere dropped into a path (sphere_points)
 
 import numpy as np
+import trimesh # reads the item's STL for its size (already needed by ir_support)
 
 
 # sphere points: points spread evenly over a sphere (fibonacci spiral). used for the obstacle dropped into a path
@@ -12,6 +13,16 @@ def sphere_points(centre, radius, count=200):
     theta = np.pi * (1 + 5 ** 0.5) * k                               # golden-angle spiral around
     unit = np.column_stack((np.cos(theta) * np.sin(phi), np.sin(theta) * np.sin(phi), np.cos(phi)))
     return unit * radius + np.array(centre, dtype=float)
+
+
+_bounds_cache = {} # filename -> box, so each STL is only read once
+
+
+# item bounds: the box (low corner, high corner) around an item's STL in its own frame. used so an item a robot is holding counts as part of the robot
+def item_bounds(item):
+    if item.filename not in _bounds_cache:
+        _bounds_cache[item.filename] = trimesh.load(item.filename, force="mesh").bounds * np.asarray(item.scale)
+    return _bounds_cache[item.filename]
 
 
 class CollisionChecker:

@@ -11,7 +11,7 @@ from OO_Camera import CAMERA_ANGLES
 class RobotGUI:
 
     # scenes: button label -> function to run (see OO_MainV2.py). jog_step in metres
-    def __init__(self, workcell, jog_step=0.02, beacon_position=(-1.5, 2.7, 1.2), camera_angles=None, scenes=None, live_buttons=None, hazard_scenes=None):
+    def __init__(self, workcell, jog_step=0.02, beacon_position=(-1.5, 2.3, 1.2), camera_angles=None, scenes=None, live_buttons=None, hazard_scenes=None):
         self.workcell = workcell
         self.scenes = scenes or {}
         self.hazard_scenes = hazard_scenes or [] # labels from scenes that are shown under HAZARDS instead of OPERATIONS (still queued like a scene, so the robots can move)
@@ -31,6 +31,13 @@ class RobotGUI:
     def build(self):
         env = self.workcell.env
 
+        # status block: the very top of the GUI, one label per line (state, obstacle, last event). refreshed on every workcell.step (see update_status)
+        self.status = [swift.Label("STATE: ..."), swift.Label(""), swift.Label("")]
+        for line in self.status:
+            env.add(line)
+        self.last_status = None
+        self.workcell.on_step = self.update_status
+
         # state beacons: one sphere per state, the others parked far away (removing objects crashes older swift). float colours, ints break swift on windows
         self.beacons["RUNNING"] = Sphere(radius=0.06, color=[0.0, 1.0, 0.0, 1.0])    # green
         self.beacons["ESTOPPED"] = Sphere(radius=0.06, color=[1.0, 0.0, 0.0, 1.0])   # red
@@ -38,6 +45,12 @@ class RobotGUI:
         for beacon in self.beacons.values():
             env.add(beacon)
         self.show_state()
+
+        # safety buttons (all robots)
+        env.add(swift.Label("--- SAFETY ---"))
+        env.add(swift.Button(self.on_estop, "EMERGENCY STOP"))
+        env.add(swift.Button(self.on_reset, "1. RESET E-STOP"))
+        env.add(swift.Button(self.on_restart, "2. RESTART"))
 
         # scene buttons: queued here, played in run()
         env.add(swift.Label("--- OPERATIONS ---"))
@@ -51,12 +64,6 @@ class RobotGUI:
             env.add(swift.Button(lambda *args, label=label: self.queue("scene", label), label))
         for label, function in self.live_buttons.items():
             env.add(swift.Button(lambda *args, function=function: function(), label))
-
-        # safety buttons (all robots)
-        env.add(swift.Label("--- SAFETY ---"))
-        env.add(swift.Button(self.on_estop, "EMERGENCY STOP"))
-        env.add(swift.Button(self.on_reset, "1. RESET E-STOP"))
-        env.add(swift.Button(self.on_restart, "2. RESTART"))
 
         # robot and camera dropdowns
         env.add(swift.Label("- SELECTED ROBOT -"))
@@ -90,6 +97,17 @@ class RobotGUI:
                        ("+Z", (0, 0, s)), ("-Z", (0, 0, -s))]
         for name, direction in jog_buttons:
             env.add(swift.Button(lambda *args, d=direction: self.queue("jog", d), "Jog " + name))
+
+    # update status: the block at the top of the GUI, one label per line: state (and fault), obstacle, last collision event. only written when the text changes
+    def update_status(self):
+        wc = self.workcell
+        lines = ["STATE: " + wc.state + (" - " + wc.fault if wc.fault else ""),
+                 "OBSTACLE: " + ("PLACED" if len(wc.obstacle_points) else "NONE"),
+                 wc.message]
+        if lines != self.last_status:
+            self.last_status = lines
+            for label, text in zip(self.status, lines):
+                setattr(label, "label" if hasattr(swift.Label, "label") else "desc", text) # newer swift calls it label, older swift desc
 
     # current state's sphere to beacon_position, the others parked 1000 m away. no env.step() here (unsafe inside a callback)
     def show_state(self):

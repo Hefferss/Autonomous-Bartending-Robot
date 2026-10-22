@@ -7,7 +7,9 @@ from OO_JamesRobotTest import ABBIRB140
 from OO_JackRobotTest import StaubliTX60
 from OO_UR3 import UR3Robot
 import os
-from OO_Hazards import ManActor, LightCurtain # the man's hand and the light curtain
+from OO_Hazards import ManActor, LightCurtain, PARK # the man's hand and the light curtain (PARK = where hidden things wait)
+from OO_Collision import sphere_points # point cloud for the obstacle sphere
+from spatialgeometry import Sphere # the visible obstacle
 from OO_Scene_Objects import BarScene, ROW_Y, SHAKER_X, LID_X, LID_Y, GLASS_X, UMBRELLA_X, COGNAC_X, COINTREAU_X # where the items sit (the row on the storage table)
 from math import pi
 import numpy as np 
@@ -44,6 +46,11 @@ LID_PICKUP = (LID_X, LID_Y, 0.267) # top of the lid on the storage table (lid is
 LID_START = SE3(LID_X, LID_Y, 0.045) # where the lid sits when the scene starts (same as OO_Scene_Objects.py)
 LID_DROP = (-0.3, 0.45, 0.267) # UR3 leaves the lid here for jack
 LID_ON_SHAKER = 0.477 # top of the lid once it's on the shaker
+
+# hazard obstacle: a sphere dropped between jack and will, on the line will's hand takes from his drop zone across to jack's
+OBSTACLE_RADIUS = 0.05 # m
+HANDOFF_SPOT = JACK_DROP_LID # where will and jack pass the shaker for the obstacle demo. jack reaches x <= 0.45 only, and will needs room to lift 0.2 m above it (not possible at JACK_DROP_ZONE x 0.35)
+OBSTACLE_SPOT = (0.70, 0.30, 0.35) # tuned headless with the carried shaker counted. low, so the shaker clears it once will lifts 0.2 m for the detour. clear of will's start and end poses. retune if WILL_DROP_ZONE or HANDOFF_SPOT move
 
 # ingredients will pours into the shaker. grab = top of the item on the storage table
 COGNAC_PICKUP = (COGNAC_X, ROW_Y, 0.503) # top of the cognac (its middle is on the row). 0.256 tall
@@ -218,6 +225,53 @@ def james_part(workcell, scene, ur3_setup):
     ur3.tuck()
 
 
+# cross to: moves the hand to 10 cm above xyz (same height pick_drop uses).
+#   avoid False -> move_to_q: stops before the collision (the "stop" demo)
+#   avoid True  -> move_to_pose: if blocked it re-plans over the top (the "avoid" demo)
+def cross_to(mover, xyz, avoid, lift=0.1):
+    T_over = SE3(xyz[0], xyz[1], xyz[2] + lift) * SE3.Rx(pi)
+    if avoid:
+        return mover.move_to_pose(T_over)
+    try:
+        q_goal = mover.solve_ik(T_over)
+    except ValueError:
+        print("Out of reach - move cancelled")
+        return False
+    return mover.move_to_q(q_goal)
+
+# obstacle handoff: will carries the shaker across the hazard obstacle to jack, jack holds it, will takes it back across.
+# avoid False = stops before the collision. avoid True = goes round and finishes the pass. press "Obstacle: Place" first
+def obstacle_handoff(workcell, scene, avoid):
+    will = workcell.movers["Will's Robot"]
+    jack = workcell.movers["Jack's Robot"]
+    shaker = scene.cocktail_shaker_scene
+    if workcell.state != "RUNNING": # e-stopped: don't reset anything
+        return
+    for robot in (will, jack): # reset so the button can be pressed again
+        robot.release()
+    shaker.T = SE3(WILL_DROP_ZONE[0] + SHAKER_GRAB_OFFSET, WILL_DROP_ZONE[1], 0.255) # shaker on will's drop zone
+    workcell.message = "" # clear the last event from the GUI status line
+    will_spot = (*WILL_DROP_ZONE, SHAKER_TOP)
+    jack_spot = (*HANDOFF_SPOT, SHAKER_TOP)
+    steps = [
+        lambda: will.pick_drop(will_spot, shaker), # will picks the shaker up
+        lambda: cross_to(will, jack_spot, avoid), # across the obstacle (stops or goes round)
+        lambda: will.pick_drop(jack_spot), # puts it down for jack
+        lambda: will.move_to_q(will.home_q),
+        lambda: jack.pick_drop(jack_spot, shaker), # jack takes it
+        lambda: jack.pick_drop(jack_spot), # and sets it back down
+        lambda: jack.move_to_q(jack.home_q),
+        lambda: will.pick_drop(jack_spot, shaker), # will takes it back
+        lambda: cross_to(will, will_spot, avoid), # back across the obstacle
+        lambda: will.pick_drop(will_spot),
+        lambda: will.move_to_q(will.home_q),
+    ]
+    for step in steps:
+        if not step():
+            print("HANDOFF STOPPED - avoid =", avoid, "- robot is holding position")
+            return
+    print("HANDOFF COMPLETE - avoid =", avoid)
+
 # the whole cocktail: will, then jack, then james. skips the rest if an e-stop happened
 def make_cocktail(workcell, scene, ur3_setup):
     for part in (will_part, jack_part, james_part):
@@ -274,6 +328,9 @@ if __name__ == "__main__":
 
     # --- the man's hand and the light curtain ---
     man = ManActor(workcell.env, scale=MAN_SCALE) # hidden until a button brings him in
+    obstacle = Sphere(radius=OBSTACLE_RADIUS, color=[1.0, 0.0, 0.0, 1.0]) # hazard obstacle, parked until its button is pressed (added once, never removed: removing crashes older swift)
+    obstacle.T = PARK
+    workcell.env.add(obstacle)
     curtain = LightCurtain(workcell, workcell.env, CURTAIN_X, -CURTAIN_HALF_WIDTH, CURTAIN_HALF_WIDTH, bottom=TABLE_HEIGHT + 0.05) # on the far side of the table from the UR3
     curtain.add_source(man) # the man can break it, the robots cannot
     workcell.add_input(man) # man first so he has moved before the curtain looks
@@ -285,17 +342,34 @@ if __name__ == "__main__":
         man.walk_hand((CURTAIN_X + 0.6, 0.0, z), (CURTAIN_X - 0.3, 0.0, z), pi) # facing -x, towards the UR3
         print("Man is walking towards the drinks table")
 
+    def place_obstacle(): # live button: red sphere between jack and will. every move now checks it through workcell.obstacle_points
+        obstacle.T = SE3(*OBSTACLE_SPOT)
+        workcell.obstacle_points = sphere_points(OBSTACLE_SPOT, OBSTACLE_RADIUS)
+        for name, mover in workcell.movers.items(): # a robot already touching it is let move out (see move_to_q), so warn
+            if mover.checker.collides(mover.robot.q, workcell.obstacle_points):
+                print("WARNING:", name, "is already touching the obstacle - move it or the obstacle first")
+        print("Obstacle placed between Jack and Will")
+
+    def remove_obstacle(): # live button: sphere parked away, points cleared
+        obstacle.T = PARK
+        workcell.obstacle_points = np.empty((0, 3))
+        workcell.message = ""
+        print("Obstacle removed")
+
     # scene buttons: label -> function (lambda so it doesn't run straight away)
     scenes = {
         "Make Cocktail": lambda: make_cocktail(workcell, scene, ur3), # all three in order: will, jack, james
         "Will's Robot": lambda: will_part(workcell, scene, ur3),
         "Jack's Robot": lambda: jack_part(workcell, scene, ur3),
         "James' Robot": lambda: james_part(workcell, scene, ur3),
-        "Reset Scene": lambda: (reset_scene(workcell, ur3, start_poses), man.hide()),
+        "Reset Scene": lambda: (reset_scene(workcell, ur3, start_poses), man.hide(), remove_obstacle()),
         "Jack: Go To Test Pose": lambda: jack_test_pose(workcell),
+        "Handoff: Stop Demo": lambda: obstacle_handoff(workcell, scene, False), # stops before the collision
+        "Handoff: Avoid Demo": lambda: obstacle_handoff(workcell, scene, True), # goes round it
     }
-    live_buttons = {"Man: Walk Into Light Curtain": man_through_curtain, "Man: Remove": man.hide}
-    gui = RobotGUI(workcell, scenes=scenes, live_buttons=live_buttons) # button label -> scene
+    live_buttons = {"Man: Walk Into Light Curtain": man_through_curtain, "Man: Remove": man.hide,
+                    "Obstacle: Place Between Jack & Will": place_obstacle, "Obstacle: Remove": remove_obstacle}
+    gui = RobotGUI(workcell, scenes=scenes, live_buttons=live_buttons, hazard_scenes=["Handoff: Stop Demo", "Handoff: Avoid Demo"]) # the two handoffs sit under HAZARDS
     curtain.on_trip = lambda: (gui.on_estop(), man.stop()) # same path as the GUI e-stop button: beacon goes red, motion stops, then reset, then restart
     gui.build() # add the buttons, dropdown and sliders
     gui.run()

@@ -5,7 +5,7 @@ import swift
 import numpy as np
 from roboticstoolbox import jtraj, trapezoidal
 from spatialmath import SE3       
-from OO_Collision import CollisionChecker
+from OO_Collision import CollisionChecker, item_bounds
 from math import pi 
 
 TABLE_HEIGHT = 0.25 # top of every table. no robot joint is allowed below this
@@ -24,6 +24,9 @@ class Workcell:
         self.collision_on = False
         self.interlocks = [] # functions that return a message while RESET must be refused (e.g. the light curtain is still broken)
         self.fault = "" # what caused the last stop, for the GUI / terminal
+        self.obstacle_points = np.empty((0, 3)) # points of a placed hazard obstacle (n x 3). empty = none. set by the hazard button in OO_MainV2.py
+        self.message = "" # last collision / re-plan event, shown in the GUI status line
+        self.on_step = None # function the GUI sets to refresh its status line on every step (also runs while a scene is playing)
 
 
     # add robot function: stores the robot under its name (the name is used in the GUI drop down box)
@@ -42,6 +45,8 @@ class Workcell:
     def step(self, *args):
         for device in self.inputs:
             device.poll()
+        if self.on_step is not None:
+            self.on_step()
         self.env.step(*args)
 
     # launch function: opens swift, adds robots
@@ -78,6 +83,7 @@ class Workcell:
             return
         self.state = "RUNNING"
         self.fault = ""
+        self.message = ""
         print("STATE: RUNNING")
 
 
@@ -136,13 +142,14 @@ class RobotMover:
                 return False
             if not touching and self.check_collision(q_step):
                 print("UNSAFE: Robot stopped, collision ahead")
+                self.workcell.message = "COLLISION DETECTED: STOPPED"
                 return False
             self.robot.q = q_step
             self.update_meshes(q_step)
             self.workcell.step()
         return True
 
-    # check collision: lab 5 check_collision. hits if a joint goes under the table, or the other robots' links (as points) are inside my lab 6 ellipsoids
+    # check collision: lab 5 check_collision. hits if a joint goes under the table, a placed hazard obstacle (workcell.obstacle_points), or the other robots' links (as points) are inside my lab 6 ellipsoids
     def check_collision(self, q):
         if not self.workcell.collision_on:
             return False
@@ -150,11 +157,23 @@ class RobotMover:
             return True
         if self.checker.self_hit(q): # a link going through its own robot
             return True
+        if len(self.workcell.obstacle_points) and (self.checker.collides(q, self.workcell.obstacle_points) or self.held_hits(q, self.workcell.obstacle_points)): # the hazard obstacle: my links (ellipsoids) or anything I'm carrying
+            return True
         for other in self.workcell.movers.values():
             if other is self:
                 continue
             points = other.checker.link_points(other.robot.q)
             if self.checker.collides(q, points):
+                return True
+        return False
+
+    # held hits: true if anything the robot is carrying (its STL box) would touch the obstacle points at q. the obstacle points are moved into each item's own frame and tested against its box
+    def held_hits(self, q, points, margin=0.01):
+        T_ee = self.robot.fkine(q).A
+        for item, offset in self.held:
+            low, high = item_bounds(item)
+            local = (np.linalg.inv(T_ee @ offset) @ np.vstack((points.T, np.ones(len(points)))))[:3].T # obstacle points in the item's frame
+            if np.any(np.all((local >= low - margin) & (local <= high + margin), axis=1)):
                 return True
         return False
 
@@ -213,6 +232,7 @@ class RobotMover:
 
         for lift in [0.2, 0.4]:
             print("Re-planning: going over the top at", lift, "m")
+            self.workcell.message = "COLLISION DETECTED: AVOIDING"
             try:
                 q_up_here = self.solve_ik(SE3(0, 0, lift) * self.robot.fkine(self.robot.q))
                 q_up_there = self.solve_ik(SE3(0, 0, lift) * T_target, q0=q_up_here)
@@ -224,6 +244,7 @@ class RobotMover:
             if self.workcell.state != "RUNNING":
                 return False
         print("No clear path - robot staying put")
+        self.workcell.message = "NO CLEAR PATH - robot staying put"
         return False
 
     # pick drop: above, down, grab (if given an item) or let go, back up. stops on e-stop
@@ -360,6 +381,7 @@ class RobotMover:
 
             if self.check_collision(q_path[i + 1, :]): # same table + robot check as move_to_q
                 print("UNSAFE: RMRC stopped, collision ahead")
+                self.workcell.message = "COLLISION DETECTED: STOPPED"
                 return False
             robot.q = q_path[i + 1, :] # play this step now (the lab plays them all at the end)
             self.update_meshes(robot.q)
