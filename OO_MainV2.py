@@ -363,12 +363,12 @@ if __name__ == "__main__":
         "Jack's Robot": lambda: jack_part(workcell, scene, ur3),
         "James' Robot": lambda: james_part(workcell, scene, ur3),
         "Reset Scene": lambda: (reset_scene(workcell, ur3, start_poses), man.hide(), remove_obstacle()),
-        "Jack: Go To Test Pose": lambda: jack_test_pose(workcell),
-        "Handoff: Stop Demo": lambda: obstacle_handoff(workcell, scene, False), # stops before the collision
-        "Handoff: Avoid Demo": lambda: obstacle_handoff(workcell, scene, True), # goes round it
+        "Jack Move to Point Demo": lambda: jack_test_pose(workcell),
+        "Demo Collision Stop": lambda: obstacle_handoff(workcell, scene, False), # stops before the collision
+        "Demo Collision Avoid": lambda: obstacle_handoff(workcell, scene, True), # goes round it
     }
-    live_buttons = {"Man: Walk Into Light Curtain": man_through_curtain, "Man: Remove": man.hide,
-                    "Obstacle: Place Between Jack & Will": place_obstacle, "Obstacle: Remove": remove_obstacle}
+    live_buttons = {"Person Walks Into Light Curtain": man_through_curtain, "Remove Person": man.hide,
+                    "Add Obstacle": place_obstacle, "Remove Obstacle": remove_obstacle}
     gui = RobotGUI(workcell, scenes=scenes, live_buttons=live_buttons, hazard_scenes=["Handoff: Stop Demo", "Handoff: Avoid Demo"]) # the two handoffs sit under HAZARDS
     curtain.on_trip = lambda: (gui.on_estop(), man.stop()) # same path as the GUI e-stop button: beacon goes red, motion stops, then reset, then restart
     gui.build() # add the buttons, dropdown and sliders
