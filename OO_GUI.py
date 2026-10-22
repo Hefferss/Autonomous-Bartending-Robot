@@ -11,9 +11,11 @@ from OO_Camera import CAMERA_ANGLES
 class RobotGUI:
 
     # scenes: button label -> function to run (see OO_MainV2.py). jog_step in metres
-    def __init__(self, workcell, jog_step=0.02, beacon_position=(-1.5, 2.3, 1.2), camera_angles=None, scenes=None):
+    def __init__(self, workcell, jog_step=0.02, beacon_position=(-1.5, 2.3, 1.2), camera_angles=None, scenes=None, live_buttons=None, hazard_scenes=None):
         self.workcell = workcell
         self.scenes = scenes or {}
+        self.hazard_scenes = hazard_scenes or [] # labels from scenes that are shown under HAZARDS instead of OPERATIONS (still queued like a scene, so the robots can move)
+        self.live_buttons = live_buttons or {} # label -> function that runs straight away when clicked (not queued), so it works while a scene is running. must not call env.step
         self.jog_step = jog_step
         self.beacon_position = beacon_position
         self.names = list(workcell.movers.keys()) # robot names in dropdown order
@@ -40,7 +42,15 @@ class RobotGUI:
         # scene buttons: queued here, played in run()
         env.add(swift.Label("--- OPERATIONS ---"))
         for label in self.scenes:
+            if label not in self.hazard_scenes:
+                env.add(swift.Button(lambda *args, label=label: self.queue("scene", label), label))
+
+        # live buttons: run inside the click itself, so they can happen while a scene is running (the man walking in)
+        env.add(swift.Label("--- HAZARDS ---"))
+        for label in self.hazard_scenes:
             env.add(swift.Button(lambda *args, label=label: self.queue("scene", label), label))
+        for label, function in self.live_buttons.items():
+            env.add(swift.Button(lambda *args, function=function: function(), label))
 
         # safety buttons (all robots)
         env.add(swift.Label("--- SAFETY ---"))

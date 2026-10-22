@@ -22,6 +22,8 @@ class Workcell:
         self.movers = {}
         self.inputs = []
         self.collision_on = False
+        self.interlocks = [] # functions that return a message while RESET must be refused (e.g. the light curtain is still broken)
+        self.fault = "" # what caused the last stop, for the GUI / terminal
 
 
     # add robot function: stores the robot under its name (the name is used in the GUI drop down box)
@@ -49,6 +51,10 @@ class Workcell:
             mover.add_to_scene()
         self.env.step()
 
+    # add interlock: check() returns a message while the workcell must NOT be reset, otherwise None
+    def add_interlock(self, check):
+        self.interlocks.append(check)
+
     # safety state functions: each step only works from the right state, so the robots can never restart by accident
     def emergency_stop(self):
         self.state = "ESTOPPED"
@@ -58,6 +64,11 @@ class Workcell:
         if self.state != "ESTOPPED":
             print("Reset ignored - e-stop is not active")
             return
+        for check in self.interlocks: # a light curtain that is still broken blocks the reset
+            reason = check()
+            if reason:
+                print("Reset refused -", reason)
+                return
         self.state = "RESET"
         print("STATE: RESET - press RESTART when the area is clear")
 
@@ -66,6 +77,7 @@ class Workcell:
             print("Restart ignored - reset the e-stop first")
             return
         self.state = "RUNNING"
+        self.fault = ""
         print("STATE: RUNNING")
 
 

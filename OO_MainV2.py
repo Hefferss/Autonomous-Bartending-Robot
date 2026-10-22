@@ -1,11 +1,13 @@
 from spatialmath import SE3
 from spatialmath.base import transl, trotz
-from OO_MovementCommands import Workcell
+from OO_MovementCommands import Workcell, TABLE_HEIGHT
 from OO_GUI import RobotGUI
 from OO_WillRobotTest import KawasakiRS007N
 from OO_JamesRobotTest import ABBIRB140
 from OO_JackRobotTest import StaubliTX60
 from OO_UR3 import UR3Robot
+import os
+from OO_Hazards import ManActor, LightCurtain # the man's hand and the light curtain
 from OO_Scene_Objects import BarScene, ROW_Y, SHAKER_X, LID_X, LID_Y, GLASS_X, UMBRELLA_X, COGNAC_X, COINTREAU_X # where the items sit (the row on the storage table)
 from math import pi
 import numpy as np 
@@ -29,6 +31,10 @@ UMBRELLA_PICKUP = (UMBRELLA_X, ROW_Y, 0.341) # top of the umbrella in its pot on
 JAMES_UMBRELLA_SPOT = (-0.9, 0.45) # UR3 leaves the umbrella here for james
 SENSORS_TABLE_SPOT = (1.75, 0.1) # UR3 puts the finished cocktail here on the SensorsTable (x 1.6 to 2.1)
 UR3_SENSORS_X = 1.4 # UR3 rail position for reaching the SensorsTable
+FINAL_GLASS_Z = GLASS_PICKUP[2] # grab height of the finished glass on the drinks table (the SensorsTable, top at 0.25 like every other table)
+CURTAIN_X = 2.25 # the light curtain plane: 15 cm past the east edge of the SensorsTable (x 1.6 to 2.1), facing the UR3
+CURTAIN_HALF_WIDTH = 0.55 # its posts stand at y = -0.55 and +0.55 (the table is y -0.5 to 0.5)
+MAN_SCALE = 0.6 # the man's size (1.0 = 1.87 m tall). smaller = his hand is lower and closer to his body
 GLASS_RIM_GRAB = 0.05 # UR3 holds the finished glass by its rim, this far towards the UR3 from the centre, so it misses the umbrella
 UMBRELLA_IN_GLASS = 0.416 # umbrella top once james sets it in the glass (its base 5 cm down inside the bowl)
 SHAKE_STROKE = 0.06 # jack's shake goes this far up and down (m)
@@ -208,7 +214,7 @@ def james_part(workcell, scene, ur3_setup):
     ur3.pick_drop((JAMES_GLASS_SPOT[0], JAMES_GLASS_SPOT[1] - GLASS_RIM_GRAB, GLASS_PICKUP[2]), [glass, umbrella])
     ur3.tuck()
     ur3_setup.move_base(ur3, UR3_SENSORS_X)
-    ur3.pick_drop((SENSORS_TABLE_SPOT[0], SENSORS_TABLE_SPOT[1] - GLASS_RIM_GRAB, GLASS_PICKUP[2]))
+    ur3.pick_drop((SENSORS_TABLE_SPOT[0], SENSORS_TABLE_SPOT[1] - GLASS_RIM_GRAB, FINAL_GLASS_Z))
     ur3.tuck()
 
 
@@ -266,15 +272,30 @@ if __name__ == "__main__":
     start_poses = save_start_poses(scene) # save where everything starts
     workcell.collision_on = True #every robot checks the other robots before each step (false to turn off)
 
+    # --- the man's hand and the light curtain ---
+    man = ManActor(workcell.env, scale=MAN_SCALE) # hidden until a button brings him in
+    curtain = LightCurtain(workcell, workcell.env, CURTAIN_X, -CURTAIN_HALF_WIDTH, CURTAIN_HALF_WIDTH, bottom=TABLE_HEIGHT + 0.05) # on the far side of the table from the UR3
+    curtain.add_source(man) # the man can break it, the robots cannot
+    workcell.add_input(man) # man first so he has moved before the curtain looks
+    workcell.add_input(curtain)
+    workcell.add_interlock(curtain.interlock) # RESET is refused while the curtain is still broken
+
+    def man_through_curtain(): # live button: his hand walks west through the light curtain, over the table
+        z = man.HAND[2]
+        man.walk_hand((CURTAIN_X + 0.6, 0.0, z), (CURTAIN_X - 0.3, 0.0, z), pi) # facing -x, towards the UR3
+        print("Man is walking towards the drinks table")
+
     # scene buttons: label -> function (lambda so it doesn't run straight away)
     scenes = {
         "Make Cocktail": lambda: make_cocktail(workcell, scene, ur3), # all three in order: will, jack, james
         "Will's Robot": lambda: will_part(workcell, scene, ur3),
         "Jack's Robot": lambda: jack_part(workcell, scene, ur3),
         "James' Robot": lambda: james_part(workcell, scene, ur3),
-        "Reset Scene": lambda: reset_scene(workcell, ur3, start_poses),
+        "Reset Scene": lambda: (reset_scene(workcell, ur3, start_poses), man.hide()),
         "Jack: Go To Test Pose": lambda: jack_test_pose(workcell),
     }
-    gui = RobotGUI(workcell, scenes=scenes) # button label -> scene
+    live_buttons = {"Man: Walk Into Light Curtain": man_through_curtain, "Man: Remove": man.hide}
+    gui = RobotGUI(workcell, scenes=scenes, live_buttons=live_buttons) # button label -> scene
+    curtain.on_trip = lambda: (gui.on_estop(), man.stop()) # same path as the GUI e-stop button: beacon goes red, motion stops, then reset, then restart
     gui.build() # add the buttons, dropdown and sliders
     gui.run()
