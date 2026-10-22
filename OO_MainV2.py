@@ -84,10 +84,10 @@ def will_pours(workcell, ur3_setup, item, pickup, length, drop_xy):
 
     ur3_setup.move_base(ur3, drop_xy[0])
     ur3.pick_drop(drop, item) # UR3 takes it back to where it started
-    ur3.transport()
+    ur3.tuck()
     ur3_setup.move_base(ur3, pickup[0])
     ur3.pick_drop(pickup)
-    ur3.transport()
+    ur3.tuck()
 
 
 # will's part: UR3 brings the shaker, will moves it and puts it down at jack's drop zone (the hand off to jack)
@@ -242,10 +242,10 @@ def james_part(workcell, scene, ur3_setup):
 
     ur3_setup.move_base(ur3, JAMES_GLASS_SPOT[0]) # UR3 takes the finished cocktail to the SensorsTable
     ur3.pick_drop((JAMES_GLASS_SPOT[0], JAMES_GLASS_SPOT[1] - GLASS_RIM_GRAB, GLASS_PICKUP[2]), [glass, umbrella])
-    ur3.tuck()
+    ur3.transport()
     ur3_setup.move_base(ur3, UR3_SENSORS_X)
     ur3.pick_drop((SENSORS_TABLE_SPOT[0], SENSORS_TABLE_SPOT[1] - GLASS_RIM_GRAB, FINAL_GLASS_Z))
-    ur3.tuck()
+    ur3.transport()
 
 
 # cross to: moves the hand to 10 cm above xyz (same height pick_drop uses).
