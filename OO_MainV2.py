@@ -48,7 +48,7 @@ LID_DROP = (-0.3, 0.45, 0.267) # UR3 leaves the lid here for jack
 LID_ON_SHAKER = 0.477 # top of the lid once it's on the shaker
 
 # hazard obstacle: a sphere dropped between jack and will, on the line will's hand takes from his drop zone across to jack's
-OBSTACLE_RADIUS = 0.05 # m
+OBSTACLE_RADIUS = 0.09 # m
 HANDOFF_SPOT = JACK_DROP_LID # where will and jack pass the shaker for the obstacle demo. jack reaches x <= 0.45 only, and will needs room to lift 0.2 m above it (not possible at JACK_DROP_ZONE x 0.35)
 OBSTACLE_SPOT = (0.70, 0.30, 0.35) # tuned headless with the carried shaker counted. low, so the shaker clears it once will lifts 0.2 m for the detour. clear of will's start and end poses. retune if WILL_DROP_ZONE or HANDOFF_SPOT move
 
@@ -240,7 +240,7 @@ def cross_to(mover, xyz, avoid, lift=0.1):
     return mover.move_to_q(q_goal)
 
 # obstacle handoff: will carries the shaker across the hazard obstacle to jack, jack holds it, will takes it back across.
-# avoid False = stops before the collision. avoid True = goes round and finishes the pass. press "Obstacle: Place" first
+# avoid False = stops before the collision. avoid True = goes round and finishes the pass. press "Add Obstacle" first
 def obstacle_handoff(workcell, scene, avoid):
     will = workcell.movers["Will's Robot"]
     jack = workcell.movers["Jack's Robot"]
@@ -369,7 +369,7 @@ if __name__ == "__main__":
     }
     live_buttons = {"Person Walks Into Light Curtain": man_through_curtain, "Remove Person": man.hide,
                     "Add Obstacle": place_obstacle, "Remove Obstacle": remove_obstacle}
-    gui = RobotGUI(workcell, scenes=scenes, live_buttons=live_buttons, hazard_scenes=["Handoff: Stop Demo", "Handoff: Avoid Demo"]) # the two handoffs sit under HAZARDS
+    gui = RobotGUI(workcell, scenes=scenes, live_buttons=live_buttons) # no hazard_scenes: the two collision demos sit under OPERATIONS
     curtain.on_trip = lambda: (gui.on_estop(), man.stop()) # same path as the GUI e-stop button: beacon goes red, motion stops, then reset, then restart
     gui.build() # add the buttons, dropdown and sliders
     gui.run()
