@@ -10,7 +10,7 @@ import os
 from OO_Hazards import ManActor, LightCurtain, PARK # the man's hand and the light curtain (PARK = where hidden things wait)
 from OO_Collision import sphere_points # point cloud for the obstacle sphere
 from spatialgeometry import Sphere # the visible obstacle
-from OO_Scene_Objects import BarScene, ROW_Y, SHAKER_X, LID_X, LID_Y, GLASS_X, UMBRELLA_X, COGNAC_X, COINTREAU_X # where the items sit (the row on the storage table)
+from OO_Scene_Objects import BarScene, ROW_Y, LEMON_X, SHAKER_X, LID_X, LID_Y, GLASS_X, UMBRELLA_X, COGNAC_X, COINTREAU_X # where the items sit (the row on the storage table)
 from math import pi
 import numpy as np 
 from OO_Controller import XboxController              # Xbox controller e-stop
@@ -27,7 +27,7 @@ JACK_DROP_LID = (0.43, 0.45) # will leaves the shaker here for jack
 GLASS_PICKUP = (GLASS_X, ROW_Y, 0.38) # top of the cocktail glass on the storage table (0.125 tall)
 JAMES_GLASS_SPOT = (-0.7, 0.45) # UR3 leaves the glass here for james
 UR3_JAMES_WAIT_X = 0.3 # where the UR3 waits on the rail while james works
-JAMES_LID_SPOT = (-0.45, 0.65, 0.267) # james puts the lid down here (lid top on the table), behind the shaker
+JAMES_LID_SPOT = (-0.3, 0.85, 0.267) # james puts the lid down here (lid top on the table), behind the shaker
 JAMES_POUR_HEIGHT = 0.62 # james holds the shaker rim this high over the glass, so the shaker clears the glass before tipping
 JAMES_TILT = 2.1 # how far james tips the shaker (rad, ~120 deg)
 UMBRELLA_PICKUP = (UMBRELLA_X, ROW_Y, 0.341) # top of the umbrella in its pot on the storage table (0.086 tall)
@@ -42,11 +42,14 @@ GLASS_RIM_GRAB = 0.05 # UR3 holds the finished glass by its rim, this far toward
 UMBRELLA_IN_GLASS = 0.416 # umbrella top once james sets it in the glass (its base 5 cm down inside the bowl)
 SHAKE_STROKE = 0.06 # jack's shake goes this far up and down (m)
 JACK_TEST_Q = [30, 60, -40, 0, 30, 0] # test pose for the marker just in case
-JAMES_DROP_ZONE = (-0.45, 0.45) # jack leaves the shaker (lid on) here for james. between their bases, both can reach it
+JAMES_DROP_ZONE = (-0.45, 0.6) # jack leaves the shaker (lid on) here for james. between their bases, both can reach it
 LID_PICKUP = (LID_X, LID_Y, 0.267) # top of the lid on the storage table (lid is 12 mm thick)
 LID_START = SE3(LID_X, LID_Y, 0.045) # where the lid sits when the scene starts (same as OO_Scene_Objects.py)
 LID_DROP = (-0.3, 0.45, 0.267) # UR3 leaves the lid here for jack
 LID_ON_SHAKER = 0.477 # top of the lid once it's on the shaker
+LEMON_PICKUP = (LEMON_X, ROW_Y, 0.265)   # top of the lemon slice on the storage table
+JAMES_LEMON_SPOT = (-1.1, 0.45)          # UR3 leaves the lemon here for james (mirror of the umbrella spot about his base)
+LEMON_HOVER = 0.10                       # how far above the umbrella-in-glass height the lemon hovers
 
 # hazard obstacle: a sphere dropped between jack and will, on the line will's hand takes from his drop zone across to jack's
 OBSTACLE_RADIUS = 0.09 # m
@@ -175,6 +178,7 @@ def james_part(workcell, scene, ur3_setup):
     shaker = scene.cocktail_shaker_scene
     lid = scene.cocktail_shaker_lid_scene
     umbrella = scene.Umbrella_scene
+    lemon = scene.lemon_scene
     if workcell.state != "RUNNING": # e-stopped: don't reset anything
         return
     if not hasattr(scene, "start_poses"): # first press: remember where everything starts
@@ -183,6 +187,7 @@ def james_part(workcell, scene, ur3_setup):
         robot.release()
     glass.T = scene.start_poses[glass].copy()
     umbrella.T = scene.start_poses[umbrella].copy()
+    lemon.T = scene.start_poses[lemon].copy()
     shaker.T = SE3(*JAMES_DROP_ZONE, 0.255) # shaker + lid where jack leaves them, so james' button works on its own too
     lid.T = SE3(*JAMES_DROP_ZONE, 0.255) # (the lid stl's origin is at the shaker's base)
 
@@ -198,13 +203,30 @@ def james_part(workcell, scene, ur3_setup):
     jam.pick_drop(JAMES_LID_SPOT) # and puts it down behind the shaker
     shaker_rim = (JAMES_DROP_ZONE[0] - SHAKER_GRAB_OFFSET, JAMES_DROP_ZONE[1], SHAKER_TOP) # rim, same grab as will and jack
     jam.pick_drop(shaker_rim, shaker)
-    T_pour = SE3(*JAMES_GLASS_SPOT, JAMES_POUR_HEIGHT) * SE3.Rx(pi) # rim over the glass, shaker upright
+    T_pour = SE3(*JAMES_GLASS_SPOT, JAMES_POUR_HEIGHT) * SE3.Rx(pi) # rim over the glass, shaker upright CURRENTLY CLIPS grab other side of rim
     jam.move_to_pose(T_pour)
     jam.rmrc_to(T_pour * SE3.Ry(JAMES_TILT), orientation_weight=1.0, duration=2.0, steps=40) # RMRC tip: hand stays put, shaker tips into the glass
     if not jam.wait(): # pouring
         return
     jam.rmrc_to(T_pour, orientation_weight=1.0, duration=2.0, steps=40) # tip back up
     jam.pick_drop(shaker_rim) # shaker back where it was
+    jam.move_to_q(jam.home_q)
+
+    ur3_setup.move_base(ur3, LEMON_PICKUP[0]) # UR3 fetches the lemon
+    ur3.pick_drop(LEMON_PICKUP, lemon)        
+    ur3.tuck()
+    ur3_setup.move_base(ur3, JAMES_LEMON_SPOT[0])
+    ur3.pick_drop((*JAMES_LEMON_SPOT, LEMON_PICKUP[2])) # leaves it at the handover spot
+    ur3.tuck()
+    ur3_setup.move_base(ur3, UR3_JAMES_WAIT_X) 
+
+    lemon_spot = (*JAMES_LEMON_SPOT, LEMON_PICKUP[2])
+    T_hover = SE3(*JAMES_GLASS_SPOT, UMBRELLA_IN_GLASS + LEMON_HOVER) * SE3.Rx(pi) # same xy as the umbrella
+    jam.pick_drop(lemon_spot, lemon)  
+    jam.move_to_pose(T_hover)         # hover over the glass
+    if not jam.wait(): # brief pause over the glass works with estop
+        return
+    jam.pick_drop(lemon_spot)         
     jam.move_to_q(jam.home_q)
 
     ur3_setup.move_base(ur3, UMBRELLA_PICKUP[0]) # UR3 fetches the umbrella for james
