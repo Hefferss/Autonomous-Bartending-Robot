@@ -118,14 +118,26 @@ class BarScene:
 
         #Estop, just outside the front tape
         self.estop = part_mesh("EmergencyStopButton")
-        self.estop.T = SE3(-1.5, 2.3, 0.6)
+        self.estop.T = SE3(-1.5, 2.7, 0.6)
         env.add(self.estop)
 
         #Safety Man, standing next to the estop
         self.safety_man = part_mesh("SafetyPerson")
-        self.safety_man.T = SE3(-1.0, 2.4, 0) * SE3.Rz(pi/2)
+        self.safety_man.T = SE3(-1.0, 2.8, 0) * SE3.Rz(pi/2)
         env.add(self.safety_man)
         
         self.ctable = part_mesh("SimpleTable")
-        self.ctable.T = SE3(-1.5, 2.3, 0)
+        self.ctable.T = SE3(-1.5, 2.7, 0)
         env.add(self.ctable)
+
+                #safety barriers (A1 part, 1.5m long, 1m tall) - just outside the tape, east side left open for the light curtain
+        barrier_poses = [SE3(-1.25, -1.1, 0), SE3(0.25, -1.1, 0), SE3(1.75, -1.1, 0), SE3(2.25, -1.1, 0),
+                         SE3(-1.25, 2.05, 0), SE3(0.25, 2.05, 0), SE3(1.75, 2.05, 0), SE3(2.25, 2.05, 0),
+                         SE3(-2.1, -0.25, 0) * trotz(-pi/2), SE3(-2.1, 1.25, 0) * trotz(-pi/2),
+                         SE3(3.05, 1.35, 0) * trotz(-pi/2)]
+        self.barriers = []
+        for pose in barrier_poses:
+            barrier = part_mesh("barrier1.5x0.2x1m")
+            barrier.T = pose
+            env.add(barrier)
+            self.barriers.append(barrier)
