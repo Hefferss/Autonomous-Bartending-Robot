@@ -6,7 +6,7 @@ from OO_WillRobotTest import KawasakiRS007N
 from OO_JamesRobotTest import ABBIRB140
 from OO_JackRobotTest import StaubliTX60
 from OO_UR3 import UR3Robot
-from OO_Scene_Objects import BarScene, ROW_Y, SHAKER_X, LID_X, GLASS_X, UMBRELLA_X, COGNAC_X, COINTREAU_X # where the items sit (the row on the storage table)
+from OO_Scene_Objects import BarScene, ROW_Y, SHAKER_X, LID_X, LID_Y, GLASS_X, UMBRELLA_X, COGNAC_X, COINTREAU_X # where the items sit (the row on the storage table)
 from math import pi
 import numpy as np 
 
@@ -34,8 +34,8 @@ UMBRELLA_IN_GLASS = 0.416 # umbrella top once james sets it in the glass (its ba
 SHAKE_STROKE = 0.06 # jack's shake goes this far up and down (m)
 JACK_TEST_Q = [30, 60, -40, 0, 30, 0] # test pose for the marker just in case
 JAMES_DROP_ZONE = (-0.45, 0.45) # jack leaves the shaker (lid on) here for james. between their bases, both can reach it
-LID_PICKUP = (LID_X, ROW_Y, 0.267) # top of the lid on the storage table (lid is 12 mm thick)
-LID_START = SE3(LID_X, ROW_Y, 0.045) # where the lid sits when the scene starts (same as OO_Scene_Objects.py)
+LID_PICKUP = (LID_X, LID_Y, 0.267) # top of the lid on the storage table (lid is 12 mm thick)
+LID_START = SE3(LID_X, LID_Y, 0.045) # where the lid sits when the scene starts (same as OO_Scene_Objects.py)
 LID_DROP = (-0.3, 0.45, 0.267) # UR3 leaves the lid here for jack
 LID_ON_SHAKER = 0.477 # top of the lid once it's on the shaker
 

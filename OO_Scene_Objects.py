@@ -17,6 +17,7 @@ BETTER_LEMON_X = 0.338
 COINTREAU_X = 0.457
 COGNAC_X = 0.609
 LID_X = 0.814
+LID_Y = ROW_Y - 0.05 # lid sits 5 cm further back than the rest of the row
 
 #all the bar objects from MainRobotSimFile.py but class (object orientated):) each one is kept as self.something so the robots can grab them later
 class BarScene:
@@ -99,7 +100,7 @@ class BarScene:
         #cocktail shaker lid, STL is modelled sitting on the shaker so drop it 0.21 to sit on the table
         cocktail_shaker_lid_location = os.path.join(item_folder, "CocktailShakerLid.stl")
         self.cocktail_shaker_lid_scene = Mesh(filename=cocktail_shaker_lid_location, color="#504E4E", scale=[0.001, 0.001, 0.001])
-        self.cocktail_shaker_lid_scene.T = SE3(LID_X, ROW_Y, 0.045)
+        self.cocktail_shaker_lid_scene.T = SE3(LID_X, LID_Y, 0.045)
         env.add(self.cocktail_shaker_lid_scene)
 
         #safety tape (1m long pieces) - taped box from x -2 to 3, y -1 to 2
