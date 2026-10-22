@@ -11,7 +11,7 @@ from OO_Camera import CAMERA_ANGLES
 class RobotGUI:
 
     # scenes: button label -> function to run (see OO_MainV2.py). jog_step in metres
-    def __init__(self, workcell, jog_step=0.02, beacon_position=(-1.5, 2.3, 1.2), camera_angles=None, scenes=None, live_buttons=None, hazard_scenes=None):
+    def __init__(self, workcell, jog_step=0.02, beacon_position=(-1.5, 2.7, 1.2), camera_angles=None, scenes=None, live_buttons=None, hazard_scenes=None):
         self.workcell = workcell
         self.scenes = scenes or {}
         self.hazard_scenes = hazard_scenes or [] # labels from scenes that are shown under HAZARDS instead of OPERATIONS (still queued like a scene, so the robots can move)
