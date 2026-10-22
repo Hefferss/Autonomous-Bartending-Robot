@@ -13,6 +13,7 @@ from spatialgeometry import Sphere # the visible obstacle
 from OO_Scene_Objects import BarScene, ROW_Y, SHAKER_X, LID_X, LID_Y, GLASS_X, UMBRELLA_X, COGNAC_X, COINTREAU_X # where the items sit (the row on the storage table)
 from math import pi
 import numpy as np 
+from OO_Controller import XboxController              # Xbox controller e-stop
 
 
 # where the EE goes to grab the shaker (its top). shaker is 0.21 tall, tables are 0.25 high
@@ -372,4 +373,7 @@ if __name__ == "__main__":
     gui = RobotGUI(workcell, scenes=scenes, live_buttons=live_buttons) # no hazard_scenes: the two collision demos sit under OPERATIONS
     curtain.on_trip = lambda: (gui.on_estop(), man.stop()) # same path as the GUI e-stop button: beacon goes red, motion stops, then reset, then restart
     gui.build() # add the buttons, dropdown and sliders
+    workcell.add_input(XboxController(on_estop=gui.on_estop,        # X button
+                                      on_back=gui.on_reset,         # B button
+                                      on_start=gui.on_restart))     # A button
     gui.run()
